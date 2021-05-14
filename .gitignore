@@ -1,0 +1,7 @@
+CMakeCache.txt
+CMakeFiles/
+*.csv
+Makefile
+cmake_install.cmake
+*.sven-VirtualBox
+example
