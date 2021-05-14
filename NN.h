@@ -34,7 +34,7 @@ class NeuralNet
 {
 private:
     Scope i_root; //graph for loading images into tensors
-    const int input_size;
+    const int input_size, output_size, middle_size;
     //load image vars
     Output file_name_var;
     Output image_tensor_var;
@@ -67,15 +67,15 @@ private:
     Output out_loss_var;
     InputList MakeTransforms(int batch_size, Input a0, Input a1, Input a2, Input b0, Input b1, Input b2);
 public:
-    NeuralNet(int in):i_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()),input_size(in) {} 
+    NeuralNet(int in, int middle, int out):i_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), input_size(in), middle_size(middle), output_size(out) {} 
     Input XavierInit(Scope scope, int in_chan, int out_chan);
     Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);
     Status CreateGraphForNN();
     Status CreateOptimizationGraph(float learning_rate);
     Status Initialize();
-    Status TrainNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results, float& loss);
+    Status TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
     Status ValidateNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results);
-    Status Predict(Tensor& image, float& result);
+    Status Predict(Tensor& image, std::vector<float>& result);
     Status FreezeSave(string& file_name);
     Status LoadSavedModel(string& file_name);
     Status PredictFromFrozen(Tensor& image, int& result);
@@ -159,16 +159,16 @@ Status NeuralNet::CreateGraphForNN()
     input_batch_var = Placeholder(t_root.WithOpName(input_name), DT_FLOAT);
 
     int in_units = input_size;
-    int out_units = 1;
+    int out_units = middle_size;
     Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
     auto relu1 = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_batch_var);
-/*
+
     in_units = out_units;
-    out_units = 1;
+    out_units = output_size;
     Scope scope_dense2 = t_root.NewSubScope("Dense2_layer");
     auto logits = AddDenseLayer("2", scope_dense2, in_units, out_units, false, relu1);
-*/
-    out_classification =Multiply(t_root.WithOpName(out_name), relu1, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
+
+    out_classification =Multiply(t_root.WithOpName(out_name), logits, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
     return t_root.status();
 }
 
@@ -219,7 +219,7 @@ Status NeuralNet::Initialize()
     return Status::OK();
 }
 
-Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results, float& loss)
+Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss)
 {
     if(!t_root.ok())
         return t_root.status();
@@ -231,15 +231,18 @@ Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, vector<float
     TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 
     loss = out_tensors[0].scalar<float>()(0);
-    //both labels and results are shaped [20, 1]
+	
+	results=TensorToVec(out_tensors[1]);
+	/*
     auto mat1 = label_batch.matrix<float>();
     auto mat2 = out_tensors[1].matrix<float>();
     for(int i = 0; i < mat1.dimension(0); i++)
         results.push_back((fabs(mat2(i, 0) - mat1(i, 0)) > 0.5f)? 0 : 1);
+	*/
     return Status::OK();
 }
 
-Status NeuralNet::Predict(Tensor& image, float& result)
+Status NeuralNet::Predict(Tensor& image, std::vector<float>& result)
 {
     if(!t_root.ok())
         return t_root.status();
@@ -247,9 +250,7 @@ Status NeuralNet::Predict(Tensor& image, float& result)
     vector<Tensor> out_tensors;
     //Inputs: image, drop rate 1 and skip drop.
     TF_CHECK_OK(t_session->Run({{input_batch_var, image}}, {out_classification}, &out_tensors));
-    auto mat = out_tensors[0].matrix<float>();
-    //result = (mat(0, 0) > 0.5f)? 1 : 0;
-    result=mat(0,0);
+    result=TensorToVec(out_tensors[0])[0];
     return Status::OK();
 }
 

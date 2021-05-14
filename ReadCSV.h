@@ -101,9 +101,10 @@ class CSVIterator
 //turns 2d vector into 2d tensor with the same entries
 //all 1d vectors must be the same length 
 const tensorflow::Tensor VecToTensor(std::vector<std::vector<double>> vec){
+	
 	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({(int)vec.size(), (int)vec[0].size()}));
 	auto input_map = input.tensor<float, 2>();
-
+	
 	for(int i=0;i<vec.size();++i){
 		for(int j=0;j<(int)vec[i].size();++j){
 			input_map(i, j) = vec[i][j];
@@ -113,8 +114,8 @@ const tensorflow::Tensor VecToTensor(std::vector<std::vector<double>> vec){
 	return input;
 }
 
-std::vector<std::vector<double>> TensorToVec(tensorflow::Tensor t){
-	std::vector<std::vector<double>> vec(t.dim_size(0),std::vector<double>(t.dim_size(1), -1));
+std::vector<std::vector<float>> TensorToVec(tensorflow::Tensor t){
+	std::vector<std::vector<float>> vec(t.dim_size(0),std::vector<float>(t.dim_size(1), -1));
 	auto input_map = t.tensor<float, 2>();
 	for(int i=0;i<(int)t.dim_size(0);++i){
 		for(int j=0;j<(int)t.dim_size(1);++j){
@@ -133,13 +134,13 @@ std::vector<std::vector<double>> getCSVasVec(std::string filename){
     for(loop; loop != CSVIterator(); ++loop){
 		temp.clear();
 		//this avoids empty lines
-		if((*loop).size()<2) continue;
+		if((*loop)[0]==""||(*loop)[0]==" ") continue;
 		for(int i=0;i<(*loop).size();++i){
 			if((*loop)[i]!=""&&(*loop)[i]!=" ")temp.push_back(std::stod(std::string((*loop)[i])));
 		}
 		vec.push_back(temp);
 	}
-	
+	std::cout<<vec<<std::endl;
 	return vec;
 }
 
@@ -184,6 +185,7 @@ std::vector<std::vector<double>> getCSVEntryasVec(std::vector<std::string> filen
 }
 
 const tensorflow::Tensor getCSVasTensor(std::string filename){
+	
 	return VecToTensor(getCSVasVec(filename));
 }
 
