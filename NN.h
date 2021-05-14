@@ -73,7 +73,7 @@ public:
     Status CreateGraphForNN();
     Status CreateOptimizationGraph(float learning_rate);
     Status Initialize();
-    Status TrainNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results, float& loss);
+    Status TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
     Status ValidateNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results);
     Status Predict(Tensor& image, float& result);
     Status FreezeSave(string& file_name);
@@ -219,7 +219,7 @@ Status NeuralNet::Initialize()
     return Status::OK();
 }
 
-Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results, float& loss)
+Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss)
 {
     if(!t_root.ok())
         return t_root.status();
@@ -231,11 +231,14 @@ Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, vector<float
     TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 
     loss = out_tensors[0].scalar<float>()(0);
-    //both labels and results are shaped [20, 1]
+	
+	results=TensorToVec(out_tensors[1]);
+	/*
     auto mat1 = label_batch.matrix<float>();
     auto mat2 = out_tensors[1].matrix<float>();
     for(int i = 0; i < mat1.dimension(0); i++)
         results.push_back((fabs(mat2(i, 0) - mat1(i, 0)) > 0.5f)? 0 : 1);
+	*/
     return Status::OK();
 }
 

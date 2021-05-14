@@ -3,17 +3,15 @@
 #include <unordered_map>
 #include "tensorflow/core/framework/tensor.h"
 #include "NN.h"
+#include "ConsoleOutput.h"
 
 using namespace tensorflow;
 
 int main(){
-	auto v=TensorToVec(VecToTensor(std::vector<std::vector<double>>(2,std::vector<double>(2,1.0))));
-	std::cout<<v;
-	return 0;
-	tensorflow::Tensor input=getCSVasTensor("writer1_200.csv", 7);
-	tensorflow::Tensor label=getCSVasTensor("writer2_200.csv", 7);
+	tensorflow::Tensor input=getCSVasTensor("test.csv");
+	tensorflow::Tensor label=getCSVasTensor("test2.csv");
+	std::cout<<"hi"<<std::endl;
 	Scope root = Scope::NewRootScope();
-	
 	
 	
 	
@@ -26,7 +24,7 @@ int main(){
 	session.Run({m}, &outputs);
 	std::cout<<outputs[0].DebugString()<<std::endl;
 */
-	vector<float> results;
+	std::vector<std::vector<float>> results;
     float loss;
 	NeuralNet NN(3);
 	NN.CreateGraphForNN();
