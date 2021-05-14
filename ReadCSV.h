@@ -1,8 +1,10 @@
 /*
 Copied from https://stackoverflow.com/questions/1120140/how-can-i-read-and-parse-csv-files-in-c?page=1&tab=votes#tab-top
 */
+#pragma once
 
 #include "tensorflow/core/framework/tensor.h"
+#include "ConsoleOutput.h"
 #include <iterator>
 #include <iostream>
 #include <fstream>
@@ -96,6 +98,8 @@ class CSVIterator
         CSVRow              m_row;
 };
 
+//turns 2d vector into 2d tensor with the same entries
+//all 1d vectors must be the same length 
 const tensorflow::Tensor VectoTensor(std::vector<std::vector<double>> vec){
 	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({(int)vec.size(), (int)vec[0].size()}));
 	auto input_map = input.tensor<float, 2>();
@@ -115,10 +119,12 @@ std::vector<std::vector<double>> getCSVasVec(std::string filename){
 	std::vector<std::vector<double>> vec;
 	std::vector<double> temp;
 
-    	for(loop; loop != CSVIterator(); ++loop){
+    for(loop; loop != CSVIterator(); ++loop){
 		temp.clear();
+		//this avoids empty lines
+		if((*loop).size()<2) continue;
 		for(int i=0;i<(*loop).size();++i){
-			if((*loop)[i]!="")temp.push_back(std::stod(std::string((*loop)[i])));
+			if((*loop)[i]!=""&&(*loop)[i]!=" ")temp.push_back(std::stod(std::string((*loop)[i])));
 		}
 		vec.push_back(temp);
 	}
@@ -137,12 +143,21 @@ std::vector<std::vector<double>> getCSVasVec(std::vector<std::string> filenameVe
 	return vec;
 }
 
+//returns 2d vector containing the [index]-entry of every line of the csv
+//first vector index denotes the timestep-1, second index denotes macro coordinate(from 4,4,4 over 5,4,4 to 10,10,10)
+std::vector<std::vector<double>> getCSVasVec(std::string filename, int index){
+	std::vector<std::vector<double>> temp=getCSVasVec(filename);
+	std::vector<std::vector<double>> vec(temp.size(),std::vector<double>());
+	for(auto element : temp) vec[element[0]-1].push_back(element[index]);
+	return vec;
+}
+
 std::vector<double> getCSVEntryasVec(std::string filename, int index){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
 	std::vector<double> vec;
-
-    	for(loop; loop != CSVIterator(); ++loop){
+	
+    for(loop; loop != CSVIterator(); ++loop){
 		vec.push_back(std::stod(std::string((*loop)[index])));
 	}
 	
@@ -165,14 +180,13 @@ const tensorflow::Tensor getCSVasTensor(std::vector<std::string> filenameVec){
 	return VectoTensor(getCSVasVec(filenameVec));
 }
 
-const tensorflow::Tensor getCSVasTensor(std::vector<std::string> filenameVec, int index){
+const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filenameVec, int index){
 	return VectoTensor(getCSVEntryasVec(filenameVec, index));
 }
 
-
-
-
-
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
+	return VectoTensor(getCSVasVec(filename, index));
+}
 
 
 

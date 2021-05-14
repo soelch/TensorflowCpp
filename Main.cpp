@@ -7,23 +7,21 @@
 using namespace tensorflow;
 
 int main(){
-	tensorflow::Tensor input=(getCSVasTensor("test.csv"));
-	tensorflow::Tensor label=(getCSVasTensor("test2.csv"));
-	std::cout<<input.DebugString(100)<<"\n";
+	tensorflow::Tensor input=getCSVasTensor("writer1_200.csv", 7);
+	tensorflow::Tensor label=getCSVasTensor("writer2_200.csv", 7);
 	Scope root = Scope::NewRootScope();
-	// 2x2 matrix
+	
+/*
 	auto a = Const(root, input);
-	// 2x2 matrix
 	auto b = Const(root, { {2, 2}, {1, 1} });
-	// a x b
 	auto m = ExpandDims(root, input, 0);
 	ClientSession session(root);
 	std::vector<Tensor> outputs;
 	session.Run({m}, &outputs);
 	std::cout<<outputs[0].DebugString()<<std::endl;
-
+*/
 	vector<float> results;
-        float loss;
+    float loss;
 	NeuralNet NN(3);
 	NN.CreateGraphForNN();
 	NN.CreateOptimizationGraph(0.0005f);
@@ -34,7 +32,6 @@ int main(){
 	temp.flat<float>()(1) = 0.4f;
 	temp.flat<float>()(2) = 0.8f;
 	std::cout<<temp.DebugString()<<std::endl;
-	//tensorflow::Input::Initializer temp({1}, tensorflow::TensorShape({1}));
 	NN.Predict(temp, loss);
 	std::cout<<loss<<std::endl;
 	NN.TrainNN(input, label, results, loss);
