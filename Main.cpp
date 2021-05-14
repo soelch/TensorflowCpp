@@ -7,9 +7,15 @@
 using namespace tensorflow;
 
 int main(){
+	auto v=TensorToVec(VecToTensor(std::vector<std::vector<double>>(2,std::vector<double>(2,1.0))));
+	std::cout<<v;
+	return 0;
 	tensorflow::Tensor input=getCSVasTensor("writer1_200.csv", 7);
 	tensorflow::Tensor label=getCSVasTensor("writer2_200.csv", 7);
 	Scope root = Scope::NewRootScope();
+	
+	
+	
 	
 /*
 	auto a = Const(root, input);

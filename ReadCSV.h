@@ -100,7 +100,7 @@ class CSVIterator
 
 //turns 2d vector into 2d tensor with the same entries
 //all 1d vectors must be the same length 
-const tensorflow::Tensor VectoTensor(std::vector<std::vector<double>> vec){
+const tensorflow::Tensor VecToTensor(std::vector<std::vector<double>> vec){
 	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({(int)vec.size(), (int)vec[0].size()}));
 	auto input_map = input.tensor<float, 2>();
 
@@ -111,6 +111,17 @@ const tensorflow::Tensor VectoTensor(std::vector<std::vector<double>> vec){
 	}
 
 	return input;
+}
+
+std::vector<std::vector<double>> TensorToVec(tensorflow::Tensor t){
+	std::vector<std::vector<double>> vec(t.dim_size(0),std::vector<double>(t.dim_size(1), -1));
+	auto input_map = t.tensor<float, 2>();
+	for(int i=0;i<(int)t.dim_size(0);++i){
+		for(int j=0;j<(int)t.dim_size(1);++j){
+			 vec[i][j]=input_map(i, j);
+		}
+	}
+	return vec;
 }
 
 std::vector<std::vector<double>> getCSVasVec(std::string filename){
@@ -173,19 +184,19 @@ std::vector<std::vector<double>> getCSVEntryasVec(std::vector<std::string> filen
 }
 
 const tensorflow::Tensor getCSVasTensor(std::string filename){
-	return VectoTensor(getCSVasVec(filename));
+	return VecToTensor(getCSVasVec(filename));
 }
 
 const tensorflow::Tensor getCSVasTensor(std::vector<std::string> filenameVec){
-	return VectoTensor(getCSVasVec(filenameVec));
+	return VecToTensor(getCSVasVec(filenameVec));
 }
 
 const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filenameVec, int index){
-	return VectoTensor(getCSVEntryasVec(filenameVec, index));
+	return VecToTensor(getCSVEntryasVec(filenameVec, index));
 }
 
 const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
-	return VectoTensor(getCSVasVec(filename, index));
+	return VecToTensor(getCSVasVec(filename, index));
 }
 
 
