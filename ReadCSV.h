@@ -100,7 +100,7 @@ class CSVIterator
 
 //turns 2d vector into 2d tensor with the same entries
 //all 1d vectors must be the same length 
-const tensorflow::Tensor VecToTensor(std::vector<std::vector<double>> vec){
+const tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec){
 	
 	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({(int)vec.size(), (int)vec[0].size()}));
 	auto input_map = input.tensor<float, 2>();
@@ -110,7 +110,25 @@ const tensorflow::Tensor VecToTensor(std::vector<std::vector<double>> vec){
 			input_map(i, j) = vec[i][j];
 		}
 	}
+	return input;
+}
 
+float maxInColumn(std::vector<std::vector<float>> vec, int column){
+	float max = vec[0][column];
+	for (int i=1;i<vec.size();++i){
+		if(vec[i][column]>max) max=vec[i][column];
+	}
+	return max;
+}
+
+const tensorflow::Tensor VecToTensor(std::vector<float> vec){
+	
+	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({1,(int)vec.size()}));
+	auto input_map = input.tensor<float, 2>();
+	
+	for(int j=0;j<(int)vec.size();++j){
+		input_map(0, j) = vec[j];
+	}
 	return input;
 }
 
@@ -125,27 +143,26 @@ std::vector<std::vector<float>> TensorToVec(tensorflow::Tensor t){
 	return vec;
 }
 
-std::vector<std::vector<double>> getCSVasVec(std::string filename){
+std::vector<std::vector<float>> getCSVasVec(std::string filename){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
-	std::vector<std::vector<double>> vec;
-	std::vector<double> temp;
+	std::vector<std::vector<float>> vec;
+	std::vector<float> temp;
 
     for(loop; loop != CSVIterator(); ++loop){
 		temp.clear();
 		//this avoids empty lines
 		if((*loop)[0]==""||(*loop)[0]==" ") continue;
 		for(int i=0;i<(*loop).size();++i){
-			if((*loop)[i]!=""&&(*loop)[i]!=" ")temp.push_back(std::stod(std::string((*loop)[i])));
+			if((*loop)[i]!=""&&(*loop)[i]!=" ")temp.push_back((float)std::stod(std::string((*loop)[i])));
 		}
 		vec.push_back(temp);
 	}
-	std::cout<<vec<<std::endl;
 	return vec;
 }
 
-std::vector<std::vector<double>> getCSVasVec(std::vector<std::string> filenameVec){
-	std::vector<std::vector<double>> vec, temp;
+std::vector<std::vector<float>> getCSVasVec(std::vector<std::string> filenameVec){
+	std::vector<std::vector<float>> vec, temp;
 
     	for(auto filename : filenameVec){
 		temp=getCSVasVec(filename);
@@ -157,27 +174,27 @@ std::vector<std::vector<double>> getCSVasVec(std::vector<std::string> filenameVe
 
 //returns 2d vector containing the [index]-entry of every line of the csv
 //first vector index denotes the timestep-1, second index denotes macro coordinate(from 4,4,4 over 5,4,4 to 10,10,10)
-std::vector<std::vector<double>> getCSVasVec(std::string filename, int index){
-	std::vector<std::vector<double>> temp=getCSVasVec(filename);
-	std::vector<std::vector<double>> vec(temp.size(),std::vector<double>());
+std::vector<std::vector<float>> getCSVasVec(std::string filename, int index){
+	std::vector<std::vector<float>> temp=getCSVasVec(filename);
+	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
 	for(auto element : temp) vec[element[0]-1].push_back(element[index]);
 	return vec;
 }
 
-std::vector<double> getCSVEntryasVec(std::string filename, int index){
+std::vector<float> getCSVEntryasVec(std::string filename, int index){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
-	std::vector<double> vec;
+	std::vector<float> vec;
 	
     for(loop; loop != CSVIterator(); ++loop){
-		vec.push_back(std::stod(std::string((*loop)[index])));
+		vec.push_back((float)(std::stod(std::string((*loop)[index]))));
 	}
 	
 	return vec;
 }
 
-std::vector<std::vector<double>> getCSVEntryasVec(std::vector<std::string> filenameVec, int index){
-	std::vector<std::vector<double>> vec;
+std::vector<std::vector<float>> getCSVEntryasVec(std::vector<std::string> filenameVec, int index){
+	std::vector<std::vector<float>> vec;
 	for(auto filename : filenameVec){
 		vec.push_back(getCSVEntryasVec(filename, index));
 	}
@@ -185,7 +202,6 @@ std::vector<std::vector<double>> getCSVEntryasVec(std::vector<std::string> filen
 }
 
 const tensorflow::Tensor getCSVasTensor(std::string filename){
-	
 	return VecToTensor(getCSVasVec(filename));
 }
 
@@ -201,7 +217,9 @@ const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
 	return VecToTensor(getCSVasVec(filename, index));
 }
 
-
+tensorflow::Tensor getTensorByIndex(tensorflow::Tensor t, int index){
+	return VecToTensor(TensorToVec(t)[index]);
+}
 
 
 

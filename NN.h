@@ -19,6 +19,7 @@
 #include "tensorflow/cc/tools/freeze_saved_model.h"
 #include "tensorflow/core/util/events_writer.h"
 #include "tensorflow/cc/framework/scope.h"
+#include "TensorCalc.h"
 
 using namespace std;
 using namespace tensorflow;
@@ -162,11 +163,16 @@ Status NeuralNet::CreateGraphForNN()
     int out_units = middle_size;
     Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
     auto relu1 = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_batch_var);
-
+/*
+	in_units = out_units;
+    out_units = middle_size;
+    Scope scope_dense2 = t_root.NewSubScope("Dense2_layer");
+    auto relu2 = AddDenseLayer("2", scope_dense2, in_units, out_units, true, relu1);
+*/	
     in_units = out_units;
     out_units = output_size;
-    Scope scope_dense2 = t_root.NewSubScope("Dense2_layer");
-    auto logits = AddDenseLayer("2", scope_dense2, in_units, out_units, false, relu1);
+    Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
+    auto logits = AddDenseLayer("2", scope_dense3, in_units, out_units, false, relu1);
 
     out_classification =Multiply(t_root.WithOpName(out_name), logits, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
     return t_root.status();
@@ -225,12 +231,11 @@ Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<
         return t_root.status();
     
     vector<Tensor> out_tensors;
-    //Inputs: batch of images, labels, drop rate and do not skip drop.
-    //Extract: Loss and result. Run also: Apply Adam commands
+
 	
     TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
-
-    loss = out_tensors[0].scalar<float>()(0);
+	
+    loss = tensorMean(out_tensors[0]);
 	
 	results=TensorToVec(out_tensors[1]);
 	/*
