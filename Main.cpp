@@ -13,8 +13,6 @@ int main(){
 	std::cout<<"hi"<<std::endl;
 	Scope root = Scope::NewRootScope();
 	
-	
-	
 	std::vector<std::vector<float>> results;
     float loss;
 	std::vector<float> res;
