@@ -3,8 +3,7 @@
 
 
 #include "tensorflow/core/framework/tensor.h"
-#include "ConsoleOutput.h"
-#include "ReadCSV.h"
+
 #include <iterator>
 #include <iostream>
 #include <fstream>
@@ -24,7 +23,5 @@ std::vector<std::vector<float>> TensorToVec(tensorflow::Tensor t);
 
 //returns single 1d tensor out of 2d tensor
 tensorflow::Tensor getTensorByIndex(tensorflow::Tensor t, int index);
-
-//#include "TensorCalc.cpph"
 
 

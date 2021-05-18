@@ -81,7 +81,7 @@ const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filename
 
 const tensorflow::Tensor getCSVasTensor(std::string filename, int index);
 
-//#include"ReadCSV.cpph"
+void VecToCSV(std::vector<float> vec);
 
 
 

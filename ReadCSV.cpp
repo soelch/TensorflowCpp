@@ -163,7 +163,15 @@ const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
 	return VecToTensor(getCSVasVec(filename, index));
 }
 
-
+void VecToCSV(std::vector<float> vec){
+	if(std::remove("output.csv")==0) std::cout<<"output.csv was deleted"<<std::endl;
+	std::ofstream myfile("output.csv");
+    
+    for(float number : vec){
+		myfile << number << '\t';
+		myfile << "," ;
+    }
+}
 
 
 

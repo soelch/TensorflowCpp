@@ -25,32 +25,19 @@ int main(){
 	NN.CreateOptimizationGraph((float)config[0][0]);
 	NN.Initialize();
 
-	tensorflow::Tensor temp(tensorflow::DT_FLOAT, tensorflow::TensorShape({1,3}));
-	temp.flat<float>()(0) = 0.2f;
-	temp.flat<float>()(1) = 0.4f;
-	temp.flat<float>()(2) = 0.8f;
-	std::cout<<temp.DebugString()<<std::endl;
-
 	for(int i=0; i<config[0][1]; ++i){ 
-	NN.TrainNN(input, label, results, loss); 
-	std::cout<<loss<<std::endl; 
-	if(i%100==0) std::cout<<"\n"<<i<<"\n"<<std::endl;
+		NN.TrainNN(input, label, results, loss); 
+		std::cout<<loss<<std::endl; 
+		if(i%100==0) std::cout<<"\n"<<i<<"\n"<<std::endl;
 	}
 	
 	auto pred=getTensorByIndex(input,249);
 	NN.Predict(pred, res);
 	std::cout<<res<<std::endl;
 	
-	if(std::remove("output.csv")==0) std::cout<<"output.csv was deleted"<<std::endl;
 	res-=TensorToVec(label)[249];
 	
-	std::ofstream myfile("output.csv");
-    
-    for(float number : res)
-    {
-		myfile << number << '\t';
-		myfile << "," ;
-    }
+	VecToCSV(res);
 	
 	return 1;
 }
