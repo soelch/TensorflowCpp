@@ -1,25 +1,6 @@
 
-#include "tensorflow/cc/ops/array_ops.h"
-#include "tensorflow/cc/framework/ops.h"
-#include "tensorflow/cc/ops/state_ops.h"
-#include "tensorflow/cc/ops/math_ops.h"
+#include "NeuralNet.h"
 
-#include <iostream>
-#include <map>
-#include <fstream>
-#include <chrono>
-#include <iomanip>
-#include "tensorflow/cc/client/client_session.h"
-#include "tensorflow/cc/ops/standard_ops.h"
-#include "tensorflow/cc/framework/gradients.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/public/session.h"
-#include "tensorflow/core/lib/io/path.h"
-#include "tensorflow/core/summary/summary_file_writer.h"
-#include "tensorflow/cc/tools/freeze_saved_model.h"
-#include "tensorflow/core/util/events_writer.h"
-#include "tensorflow/cc/framework/scope.h"
-#include "TensorCalc.h"
 
 using namespace std;
 using namespace tensorflow;
@@ -31,59 +12,11 @@ auto tf_tensor_to_vector(tensorflow::Tensor tensor, int32_t tensorSize) {
   return v;
 }
 
-class NeuralNet
-{
-private:
-    Scope i_root; //graph for loading images into tensors
-    const int input_size, output_size, middle_size;
-    //load image vars
-    Output file_name_var;
-    Output image_tensor_var;
-    //data augmentation
-    Scope a_root;
-    Output aug_tensor_input;
-    Output aug_tensor_output;
-    //training and validating the NN
-    Scope t_root; //graph
-    unique_ptr<ClientSession> t_session;
-    unique_ptr<Session> f_session;
-    //NN vars
-    Output input_batch_var;
-    string input_name = "input";
-    Output input_labels_var;
-    Output drop_rate_var; //use real drop rate in training and 1 in validating
-    string drop_rate_name = "drop_rate";
-    Output skip_drop_var; //use 0 in trainig and 1 in validating
-    string skip_drop_name = "skip_drop";
-    Output out_classification;
-    string out_name = "output_classes";
-    Output logits;
-    //Network maps
-    map<string, Output> m_vars;
-    map<string, TensorShape> m_shapes;
-    map<string, Output> m_assigns;
-    //Loss variables
-    vector<Output> v_weights_biases;
-    vector<Operation> v_out_grads;
-    Output out_loss_var;
-    InputList MakeTransforms(int batch_size, Input a0, Input a1, Input a2, Input b0, Input b1, Input b2);
-public:
-    NeuralNet(int in, int middle, int out):i_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), input_size(in), middle_size(middle), output_size(out) {} 
-    Input XavierInit(Scope scope, int in_chan, int out_chan);
-    Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);
-    Status CreateGraphForNN();
-    Status CreateOptimizationGraph(float learning_rate);
-    Status Initialize();
-    Status TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
-    Status ValidateNN(Tensor& image_batch, Tensor& label_batch, vector<float>& results);
-    Status Predict(Tensor& image, std::vector<float>& result);
-    Status FreezeSave(string& file_name);
-    Status LoadSavedModel(string& file_name);
-    Status PredictFromFrozen(Tensor& image, int& result);
-    Status CreateAugmentGraph(int batch_size, int image_side, float flip_chances, float max_angles, float sscale_shift_factor);
-    Status RandomAugmentBatch(Tensor& image_batch, Tensor& augmented_batch);
-    Status WriteBatchToImageFiles(Tensor& image_batch, string folder_name, string image_name);
-};
+void NeuralNet::CreateNN(int in, int middle, int out){
+	input_size=in;
+	middle_size=middle;
+	output_size=out;
+}
 
 Input NeuralNet::XavierInit(Scope scope, int in_chan, int out_chan)
 {
@@ -123,7 +56,7 @@ Input NeuralNet::AddDenseLayer(string idx, Scope scope, int in_units, int out_un
 /*
 Status NeuralNet::FreezeSave(string& file_name)
 {
-    vector<Tensor> out_tensors;
+    std::vector<Tensor> out_tensors;
     //Extract: current weights and biases current values
     TF_CHECK_OK(t_session->Run(v_weights_biases , &out_tensors));
     unordered_map<string, Tensor> variable_to_value_map;
@@ -186,7 +119,7 @@ Status NeuralNet::CreateOptimizationGraph(float learning_rate)
     TF_CHECK_OK(scope_loss.status());
     for(pair<string, Output> i: m_vars)
         v_weights_biases.push_back(i.second);
-    vector<Output> grad_outputs;
+    std::vector<Output> grad_outputs;
     TF_CHECK_OK(AddSymbolicGradients(t_root, {out_loss_var}, v_weights_biases, &grad_outputs));
     int index = 0;
     for(pair<string, Output> i: m_vars)
@@ -210,10 +143,10 @@ Status NeuralNet::Initialize()
     if(!t_root.ok())
         return t_root.status();
     
-    vector<Output> ops_to_run;
+    std::vector<Output> ops_to_run;
     for(pair<string, Output> i: m_assigns)
         ops_to_run.push_back(i.second);
-    t_session = unique_ptr<ClientSession>(new ClientSession(t_root));
+    t_session = std::unique_ptr<ClientSession>(new ClientSession(t_root));
     TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
     /* uncomment if you want visualization of the model graph
     GraphDef graph;
@@ -230,7 +163,7 @@ Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<
     if(!t_root.ok())
         return t_root.status();
     
-    vector<Tensor> out_tensors;
+    std::vector<Tensor> out_tensors;
 
 	
     TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
@@ -252,7 +185,7 @@ Status NeuralNet::Predict(Tensor& image, std::vector<float>& result)
     if(!t_root.ok())
         return t_root.status();
     
-    vector<Tensor> out_tensors;
+    std::vector<Tensor> out_tensors;
     //Inputs: image, drop rate 1 and skip drop.
     TF_CHECK_OK(t_session->Run({{input_batch_var, image}}, {out_classification}, &out_tensors));
     result=TensorToVec(out_tensors[0])[0];
