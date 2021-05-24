@@ -119,7 +119,7 @@ Status NeuralNet::CreateOptimizationGraph(float learning_rate)
     TF_CHECK_OK(scope_loss.status());
     for(pair<string, Output> i: m_vars)
         v_weights_biases.push_back(i.second);
-    std::vector<Output> grad_outputs;
+    
     TF_CHECK_OK(AddSymbolicGradients(t_root, {out_loss_var}, v_weights_biases, &grad_outputs));
     int index = 0;
     for(pair<string, Output> i: m_vars)
@@ -178,6 +178,22 @@ Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<
         results.push_back((fabs(mat2(i, 0) - mat1(i, 0)) > 0.5f)? 0 : 1);
 	*/
     return Status::OK();
+}
+
+//sets Tensor prevInput
+//used to start a new training set
+Status NeuralNet::SetPrevInput(tensorflow::Tensor t){
+	prevInput=t;
+	
+	return Status::OK();
+}
+
+//sets Tensor prevOutput
+//used to start a new training set
+Status NeuralNet::SetPrevOutput(tensorflow::Tensor t){
+	prevOutput=t;
+	
+	return Status::OK();
 }
 
 Status NeuralNet::Predict(Tensor& image, std::vector<float>& result)

@@ -72,23 +72,6 @@ CSVRow const* CSVIterator::operator->()  const       {return &m_row;}
 bool CSVIterator::operator==(CSVIterator const& rhs) {return ((this == &rhs) || ((this->m_str == NULL) && (rhs.m_str == NULL)));}
 bool CSVIterator::operator!=(CSVIterator const& rhs) {return !((*this) == rhs);}
 
-
-
-//turns 2d vector into 2d tensor with the same entries
-//all 1d vectors must be the same length 
-const tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec){
-	
-	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({(int)vec.size(), (int)vec[0].size()}));
-	auto input_map = input.tensor<float, 2>();
-	
-	for(int i=0;i<(int)vec.size();++i){
-		for(int j=0;j<(int)vec[i].size();++j){
-			input_map(i, j) = vec[i][j];
-		}
-	}
-	return input;
-}
-
 std::vector<std::vector<float>> getCSVasVec(std::string filename){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
@@ -163,6 +146,17 @@ const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
 	return VecToTensor(getCSVasVec(filename, index));
 }
 
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVec(filename, index);
+	
+	for(std::vector<float> entry : temp){
+		vec.push_back(VecToTensor(entry));
+	}
+	
+	return vec;
+}
+
 void VecToCSV(std::vector<float> vec){
 	if(std::remove("output.csv")==0) std::cout<<"output.csv was deleted"<<std::endl;
 	std::ofstream myfile("output.csv");
@@ -173,9 +167,15 @@ void VecToCSV(std::vector<float> vec){
     }
 }
 
+void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, tensorflow::Tensor& label, std::string label_path, int label_column){
+	in=getCSVasTensor(in_path, in_column);
+	label=getCSVasTensor(label_path, label_column);
+}
 
-
-
+void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column){
+	in=getCSVasVecOfTensors(in_path, in_column);
+	label=getCSVasVecOfTensors(label_path, label_column);
+}
 
 
 

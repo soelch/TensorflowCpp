@@ -56,9 +56,13 @@ private:
     std::map<string, Output> m_assigns;
     //Loss variables
     std::vector<Output> v_weights_biases;
+	std::vector<Output> grad_outputs;
     std::vector<Operation> v_out_grads;
     Output out_loss_var;
     InputList MakeTransforms(int batch_size, Input a0, Input a1, Input a2, Input b0, Input b1, Input b2);
+	//stores previous network in-/output
+	tensorflow::Tensor prevInput;
+	tensorflow::Tensor prevOutput;
 public:
 	NeuralNet():input_size(0), middle_size(0), output_size(0), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()){}
     NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()) {} 
@@ -69,6 +73,8 @@ public:
     Status CreateOptimizationGraph(float learning_rate);
     Status Initialize();
     Status TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
+	Status SetPrevInput(tensorflow::Tensor t);
+	Status SetPrevOutput(tensorflow::Tensor t);
     Status ValidateNN(Tensor& image_batch, Tensor& label_batch, std::vector<float>& results);
     Status Predict(Tensor& image, std::vector<float>& result);
     Status FreezeSave(string& file_name);

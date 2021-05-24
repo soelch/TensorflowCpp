@@ -57,9 +57,7 @@ class CSVIterator
         CSVRow              m_row;
 };
 
-//turns 2d vector into 2d tensor with the same entries
-//all 1d vectors must be the same length 
-const tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec);
+
 
 std::vector<std::vector<float>> getCSVasVec(std::string filename);
 
@@ -81,11 +79,12 @@ const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filename
 
 const tensorflow::Tensor getCSVasTensor(std::string filename, int index);
 
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index);
+
 void VecToCSV(std::vector<float> vec);
 
+void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, tensorflow::Tensor& label, std::string label_path, int label_column);
 
-
-
-
+void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column);
 
 

@@ -17,6 +17,10 @@ std::vector<float> operator-=(std::vector<float>& vec1, std::vector<float> vec2)
 
 float maxInColumn(std::vector<std::vector<float>> vec, int column);
 
+//turns 2d vector into 2d tensor with the same entries
+//all 1d vectors must be the same length 
+const tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec);
+
 const tensorflow::Tensor VecToTensor(std::vector<float> vec);
 
 std::vector<std::vector<float>> TensorToVec(tensorflow::Tensor t);
