@@ -110,6 +110,35 @@ std::vector<std::vector<float>> getCSVasVec(std::string filename, int index){
 	return vec;
 }
 
+//same as above, but each entry is divided by mass which is indicated by the divisor index
+std::vector<std::vector<float>> getCSVasVec(std::string filename, int index, int divisor){
+	std::vector<std::vector<float>> temp=getCSVasVec(filename);
+	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
+	for(auto element : temp) vec[element[0]-1].push_back(element[index]/element[divisor]);
+	return vec;
+}
+
+
+//these two should only be used for the input/macro data ranging from index 0 to 13
+std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, int index){
+	std::vector<std::vector<float>> temp=getCSVasVec(filename);
+	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
+	for(auto element : temp){
+		if(element[1]!=0 && element[1]!=13 && element[2]!=0 && element[2]!=13 && element[3]!=0 && element[3]!=13)vec[element[0]-1].push_back(element[index]);
+	}
+	return vec;
+}
+
+std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, int index, int divisor){
+	std::vector<std::vector<float>> temp=getCSVasVec(filename);
+	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
+	for(auto element : temp){
+		if(element[1]!=0 && element[1]!=13 && element[2]!=0 && element[2]!=13 && element[3]!=0 && element[3]!=13)vec[element[0]-1].push_back(element[index]/element[divisor]);
+	}
+	return vec;
+}
+
+
 std::vector<float> getCSVEntryasVec(std::string filename, int index){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
@@ -146,12 +175,100 @@ const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
 	return VecToTensor(getCSVasVec(filename, index));
 }
 
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index, int divisor){
+	return VecToTensor(getCSVasVec(filename, index, divisor));
+}
+
 const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index){
 	std::vector<tensorflow::Tensor> vec;
 	std::vector<std::vector<float>> temp=getCSVasVec(filename, index);
 	
 	for(std::vector<float> entry : temp){
 		vec.push_back(VecToTensor(entry));
+	}
+	
+	return vec;
+}
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index, int divisor){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVec(filename, index, divisor);
+	
+	for(std::vector<float> entry : temp){
+		vec.push_back(VecToTensor(entry));
+	}
+	
+	return vec;
+}
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVec(filename, index);
+	std::vector<std::vector<float>> temp2;
+	int i=0;
+	
+	for(std::vector<float> entry : temp){
+		i++;
+		temp2.push_back(entry);
+		if(i%batch_size==0){
+			vec.push_back(VecToTensor(temp2));
+			temp2.clear();
+		}
+	}
+	
+	return vec;
+}
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size, int divisor){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVec(filename, index, divisor);
+	std::vector<std::vector<float>> temp2;
+	int i=0;
+	
+	for(std::vector<float> entry : temp){
+		i++;
+		temp2.push_back(entry);
+		if(i%batch_size==0){
+			vec.push_back(VecToTensor(temp2));
+			temp2.clear();
+		}
+	}
+	
+	return vec;
+}
+
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVecExcludingGhost(filename, index);
+	std::vector<std::vector<float>> temp2;
+	int i=0;
+	
+	for(std::vector<float> entry : temp){
+		i++;
+		temp2.push_back(entry);
+		if(i%batch_size==0){
+			vec.push_back(VecToTensor(temp2));
+			temp2.clear();
+		}
+	}
+	
+	return vec;
+}
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size, int divisor){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVecExcludingGhost(filename, index, divisor);
+	std::vector<std::vector<float>> temp2;
+	int i=0;
+	
+	for(std::vector<float> entry : temp){
+		i++;
+		temp2.push_back(entry);
+		if(i%batch_size==0){
+			vec.push_back(VecToTensor(temp2));
+			temp2.clear();
+		}
 	}
 	
 	return vec;
@@ -172,10 +289,22 @@ void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, te
 	label=getCSVasTensor(label_path, label_column);
 }
 
-void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column){
-	in=getCSVasVecOfTensors(in_path, in_column);
-	label=getCSVasVecOfTensors(label_path, label_column);
+void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size){
+	in=getCSVasVecOfBatches(in_path, in_column, batch_size);
+	label=getCSVasVecOfBatches(label_path, label_column, batch_size);
 }
 
+void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor){
+	in=getCSVasVecOfBatches(in_path, in_column, batch_size);
+	label=getCSVasVecOfBatches(label_path, label_column, batch_size, divisor);
+}
 
+void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size){
+	in=getCSVasVecOfBatchesExcludingGhost(in_path, in_column, batch_size);
+	label=getCSVasVecOfBatches(label_path, label_column, batch_size);
+}
 
+void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor){
+	in=getCSVasVecOfBatchesExcludingGhost(in_path, in_column, batch_size);
+	label=getCSVasVecOfBatches(label_path, label_column, batch_size, divisor);
+}

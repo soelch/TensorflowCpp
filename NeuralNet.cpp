@@ -138,6 +138,39 @@ Status NeuralNet::CreateOptimizationGraph(float learning_rate)
     return t_root.status();
 }
 
+Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
+{
+	/*
+    for(pair<string, Output> i: m_vars)
+        v_weights_biases.push_back(i.second);
+    
+    TF_CHECK_OK(AddSymbolicGradients(t_root, {out_loss_var}, v_weights_biases, &grad_outputs));
+    */
+	v_out_grads.clear();
+	std::map<string, Output> m_assigns_new;
+	int index = 0;
+    for(pair<string, Output> i: m_vars)
+    {
+        //Applying Adam
+        string s_index = to_string(index);
+        auto m_var = Variable(t_root, m_shapes[i.first], DT_FLOAT);
+        auto v_var = Variable(t_root, m_shapes[i.first], DT_FLOAT);
+        m_assigns_new["m_assign"+s_index] = Assign(t_root, m_var, Input::Initializer(0.f, m_shapes[i.first]));
+        m_assigns_new["v_assign"+s_index] = Assign(t_root, v_var, Input::Initializer(0.f, m_shapes[i.first]));
+
+        auto adam = ApplyAdam(t_root, i.second, m_var, v_var, 0.f, 0.f, learning_rate, 0.9f, 0.999f, 0.00000001f, {grad_outputs[index]});
+        v_out_grads.push_back(adam.operation);
+        index++;
+    }
+	
+	std::vector<Output> ops_to_run;
+    for(pair<string, Output> i: m_assigns_new) ops_to_run.push_back(i.second);
+
+    TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
+	
+    return t_root.status();
+}
+
 Status NeuralNet::Initialize()
 {
     if(!t_root.ok())
@@ -196,7 +229,7 @@ Status NeuralNet::SetPrevOutput(tensorflow::Tensor t){
 	return Status::OK();
 }
 
-Status NeuralNet::Predict(Tensor& image, std::vector<float>& result)
+Status NeuralNet::Predict(Tensor image, std::vector<float>& result)
 {
     if(!t_root.ok())
         return t_root.status();

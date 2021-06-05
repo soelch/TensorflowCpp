@@ -28,7 +28,7 @@ float maxInColumn(std::vector<std::vector<float>> vec, int column){
 	return max;
 }
 
-const tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec){
+tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec){
 	
 	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({(int)vec.size(), (int)vec[0].size()}));
 	auto input_map = input.tensor<float, 2>();
@@ -41,7 +41,7 @@ const tensorflow::Tensor VecToTensor(std::vector<std::vector<float>> vec){
 	return input;
 }
 
-const tensorflow::Tensor VecToTensor(std::vector<float> vec){
+tensorflow::Tensor VecToTensor(std::vector<float> vec){
 	
 	tensorflow::Tensor input(tensorflow::DT_FLOAT, tensorflow::TensorShape({1,(int)vec.size()}));
 	auto input_map = input.tensor<float, 2>();

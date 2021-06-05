@@ -71,12 +71,13 @@ public:
     Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);
     Status CreateGraphForNN();
     Status CreateOptimizationGraph(float learning_rate);
+	Status UpdateOptimizationGraph(float learning_rate);
     Status Initialize();
     Status TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
 	Status SetPrevInput(tensorflow::Tensor t);
 	Status SetPrevOutput(tensorflow::Tensor t);
     Status ValidateNN(Tensor& image_batch, Tensor& label_batch, std::vector<float>& results);
-    Status Predict(Tensor& image, std::vector<float>& result);
+    Status Predict(Tensor image, std::vector<float>& result);
     Status FreezeSave(string& file_name);
     Status LoadSavedModel(string& file_name);
     Status PredictFromFrozen(Tensor& image, int& result);

@@ -67,6 +67,12 @@ std::vector<std::vector<float>> getCSVasVec(std::vector<std::string> filenameVec
 //first vector index denotes the timestep-1, second index denotes macro coordinate(from 4,4,4 over 5,4,4 to 10,10,10)
 std::vector<std::vector<float>> getCSVasVec(std::string filename, int index);
 
+std::vector<std::vector<float>> getCSVasVec(std::string filename, int index, int divisor);
+
+std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, int index);
+
+std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, int index, int divisor);
+
 std::vector<float> getCSVEntryasVec(std::string filename, int index);
 
 std::vector<std::vector<float>> getCSVEntryasVec(std::vector<std::string> filenameVec, int index);
@@ -79,12 +85,28 @@ const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filename
 
 const tensorflow::Tensor getCSVasTensor(std::string filename, int index);
 
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index, int divisor);
+
 const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index);
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index, int divisor);
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size);
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size, int divisor);
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size);
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size, int divisor);
 
 void VecToCSV(std::vector<float> vec);
 
 void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, tensorflow::Tensor& label, std::string label_path, int label_column);
 
-void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column);
+void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size);
 
+void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor);
 
+void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size);
+
+void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor);
