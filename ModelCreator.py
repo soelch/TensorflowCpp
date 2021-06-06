@@ -95,6 +95,15 @@ def get_real_trainig_data(datasets_in, datasets_label):
 
     return input_array, label_array, n_datasets;
 
+def get_multiple_training_data(datasets_in, datasets_label):
+    label_array = np.empty((0, 216), float)
+    input_array = np.empty((0, 1512), float)
+    for i in range(len(datasets_label)):
+        temp_in, temp_label, n_datasets = get_real_trainig_data(datasets_in[i], datasets_label[i])
+        input_array = np.append(input_array, temp_in, axis=0)
+        label_array = np.append(label_array, temp_label, axis=0)
+    return input_array, label_array, n_datasets, len(datasets_label);
+
 def get_clean_trainig_data():
     dataset_in=pd.read_csv("MD30/clean/writer2_clean.csv", sep=";", header=None)
     dataset_label=pd.read_csv("MD30/clean/writer1_clean.csv", sep=";", header=None)
@@ -118,16 +127,16 @@ def get_clean_trainig_data():
 def compile_prob_model(size_in, size_out, n_datasets):
     model = tf.keras.models.Sequential([
       tf.keras.layers.InputLayer(input_shape=(size_in,), name="input"),
-      tfp.layers.DenseVariational(size_out+1, posterior_mean_field, prior_trainable, kl_weight=0.1/(250*n_datasets),#/batch_size <-- should this be batch size or total dataset/epoch size?
+      tfp.layers.DenseVariational(size_out+1, posterior_mean_field, prior_trainable, kl_weight=0.1/(250*6),#/batch_size <-- should this be batch size or total dataset/epoch size?
                                   kl_use_exact=False),
-      tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=1e-6 + t[...,size_out:]*0.0001)),
+      tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=1e-6 + t[...,size_out:]*0.000001)),
     ])
     
     lr = 0.005
     
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         lr,
-        decay_steps=200,
+        decay_steps=100,
         decay_rate=0.99,
         staircase=False)
     
@@ -165,33 +174,45 @@ def compile_std_model(size_in, size_out):
     
     return model
     
-def probabilistic_run(datasets_in, datasets_label):
-    input_array, label_array, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
+def prob_run(datasets_in, datasets_label):
+    input_array, label_array, n_datasets, n_scenarios = get_multiple_training_data(datasets_in, datasets_label)
 
     model = compile_prob_model(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
     model.fit(input_array, label_array, batch_size=n_datasets, epochs=250)
     
-    tf.keras.models.save_model(model, 'model_prob_batch'+str(n_datasets))
+    tf.keras.models.save_model(model, 'model_prob_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
 def std_run(datasets_in, datasets_label):
-    input_array, label_array, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
+    input_array, label_array, n_datasets, n_scenarios = get_multiple_training_data(datasets_in, datasets_label)
 
     model = compile_std_model(np.shape(input_array)[1], np.shape(label_array)[1])
     
     model.fit(input_array, label_array, batch_size=n_datasets, epochs=250)
     
-    tf.keras.models.save_model(model, 'model_std_batch'+str(n_datasets))
+    tf.keras.models.save_model(model, 'model_std_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
 ##########################################
 
 #all of these need to contain the same amount of timesteps
 #also each set of datasets(i.e. sets of same sim settings) should contain same amount of datasets
 #otherwise, the batch size will not function as intended
-datasets_in = ["../shared/MD30/250steps/1.5vel/writer2_1to1.csv"]
-datasets_label = ["../shared/MD30/250steps/1.5vel/1/writer_after1.csv", "../shared/MD30/250steps/1.5vel/2/writer_after1.csv", "../shared/MD30/250steps/1.5vel/3/writer_after1.csv"]
+datasets_in = [["../shared/MD30/250steps/1.5vel/writer2.csv"], 
+               ["../shared/MD30/250steps/1.0vel/writer2.csv"]
+               ]
 
-probabilistic_run(datasets_in, datasets_label)
+datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_after1.csv", 
+                   "../shared/MD30/250steps/1.5vel/2/writer_after1.csv", 
+                   "../shared/MD30/250steps/1.5vel/3/writer_after1.csv"],
+                  
+                  ["../shared/MD30/250steps/1.0vel/1/writer_after1.csv", 
+                   "../shared/MD30/250steps/1.0vel/2/writer_after1.csv", 
+                   "../shared/MD30/250steps/1.0vel/3/writer_after1.csv"]
+                  ]
+
+
+    
+prob_run(datasets_in, datasets_label)
 
 
 
