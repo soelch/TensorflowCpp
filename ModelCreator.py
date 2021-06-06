@@ -188,10 +188,10 @@ def std_run(datasets_in, datasets_label):
 #all of these need to contain the same amount of timesteps
 #also each set of datasets(i.e. sets of same sim settings) should contain same amount of datasets
 #otherwise, the batch size will not function as intended
-datasets_in = ["MD30/250steps/1.5vel/writer2_1to1.csv"]
-datasets_label = ["MD30/250steps/1.5vel/1/writer_after1.csv", "MD30/250steps/1.5vel/2/writer_after1.csv", "MD30/250steps/1.5vel/3/writer_after1.csv"]
+datasets_in = ["../shared/MD30/250steps/1.5vel/writer2_1to1.csv"]
+datasets_label = ["../shared/MD30/250steps/1.5vel/1/writer_after1.csv", "../shared/MD30/250steps/1.5vel/2/writer_after1.csv", "../shared/MD30/250steps/1.5vel/3/writer_after1.csv"]
 
-std_run(datasets_in, datasets_label)
+probabilistic_run(datasets_in, datasets_label)
 
 
 

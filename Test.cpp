@@ -12,8 +12,7 @@ using namespace tensorflow;
 
 int main(){
 	std::string folder=std::getenv("HOME")+std::string("/local/tensorflow_cc-master/test/");
-	const auto config=getCSVasVec(folder+"config.csv");
-	std::cout<<config<<std::endl;
+	const auto config=getConfigFromCSV(folder+"config.csv");
 	std::vector<tensorflow::Tensor> input, label;
 	std::string addendum="_clean";
 	SetupBatchesExcludingGhost(input, folder+"writer2"+addendum+".csv", 8, label, folder+"writer1"+addendum+".csv", 4, 1);
@@ -21,7 +20,7 @@ int main(){
 	SavedModelBundleLite model;
 	SessionOptions session_options = SessionOptions();
 	RunOptions run_options = RunOptions();
-	Status status = LoadSavedModel(session_options, run_options, "./model", {kSavedModelTagServe}, &model);	
+	Status status = LoadSavedModel(session_options, run_options, "./"+config[2], {kSavedModelTagServe}, &model);	
 	if (!status.ok()) {
 		std::cerr << "Failed: " << status;
 		return 3;
