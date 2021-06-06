@@ -1,6 +1,6 @@
 CMakeCache.txt
 CMakeFiles/
-*.csv
+/*.csv
 Makefile
 cmake_install.cmake
 *.sven-VirtualBox
