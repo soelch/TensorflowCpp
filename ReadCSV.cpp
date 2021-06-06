@@ -72,6 +72,20 @@ CSVRow const* CSVIterator::operator->()  const       {return &m_row;}
 bool CSVIterator::operator==(CSVIterator const& rhs) {return ((this == &rhs) || ((this->m_str == NULL) && (rhs.m_str == NULL)));}
 bool CSVIterator::operator!=(CSVIterator const& rhs) {return !((*this) == rhs);}
 
+std::vector<std::string> getConfigFromCSV(std::string filename){
+	std::ifstream file(filename);
+	CSVIterator loop(file);
+	std::vector<std::string> vec;
+	std::string temp;
+
+	for(int i=0;i<(int)(*loop).size();++i){
+		temp=std::string((*loop)[i]);
+		temp.erase(remove_if(temp.begin(), temp.end(), isspace), temp.end());
+		if((*loop)[i]!=""&&(*loop)[i]!=" ")vec.push_back(temp);
+	}
+	return vec;
+}
+
 std::vector<std::vector<float>> getCSVasVec(std::string filename){
 	std::ifstream file(filename);
 	CSVIterator loop(file);

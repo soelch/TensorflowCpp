@@ -57,7 +57,7 @@ class CSVIterator
         CSVRow              m_row;
 };
 
-
+std::vector<std::string> getConfigFromCSV(std::string filename);
 
 std::vector<std::vector<float>> getCSVasVec(std::string filename);
 
