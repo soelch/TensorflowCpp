@@ -138,11 +138,11 @@ def compile_prob_model(size_in, size_out, n_datasets):
       tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=1e-6 + t[...,size_out:]*0.000001)),
     ])
     
-    lr = 0.005
+    lr = 0.0005
     
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         lr,
-        decay_steps=100,
+        decay_steps=200,
         decay_rate=0.99,
         staircase=False)
     
@@ -185,7 +185,7 @@ def prob_run(datasets_in, datasets_label):
 
     model = compile_prob_model(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
-    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=30)
+    model.fit(input_array, label_array, batch_size=1, epochs=5)
     
     tf.keras.models.save_model(model, 'model_prob_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
