@@ -61,15 +61,27 @@ def posterior_mean_field(kernel_size, bias_size=0, dtype=None):
           reinterpreted_batch_ndims=1)),
   ])
 
+#loads all csv files specified in the lists and arranges them by timestep, so that n_scenarios*n_datasets can be chosen as batch size to hopefully average the error in each time step
 def get_real_trainig_data(datasets_in, datasets_label):
-    dflist_in = list()
-    dflist_label = list()
+    dflist_in = []
+    dflist_label = []
     
-    for dataset_in in datasets_in:
-        dflist_in.append(pd.read_csv(dataset_in, sep=";", header=None))
+    if(len(datasets_in)!=len(datasets_label)):
+        print("size of inputs does not match size of labels")
+        exit(1)
+    tmp=len(datasets_label[0])
+    for i in range(1,len(datasets_label)):
+        if(len(datasets_label[i])!=tmp):
+            print("not all scenarios are the same length")
+            exit(2)
+    
+    for scenario_in in datasets_in:
+        for dataset_in in scenario_in:
+            dflist_in.append(pd.read_csv(dataset_in, sep=";", header=None))
         
-    for dataset_label in datasets_label:
-        dflist_label.append(pd.read_csv(dataset_label, sep=";", header=None))
+    for scenario_label in datasets_label:
+        for dataset_label in scenario_label:
+            dflist_label.append(pd.read_csv(dataset_label, sep=";", header=None))
         
     for i in range(len(dflist_in)):
         dflist_in[i]=dflist_in[i][(dflist_in[i][1]!=0) & (dflist_in[i][1]!=13) & (dflist_in[i][2]!=0) & (dflist_in[i][2]!=13) & (dflist_in[i][3]!=0) & (dflist_in[i][3]!=13)]
@@ -86,23 +98,17 @@ def get_real_trainig_data(datasets_in, datasets_label):
     label_array = np.empty((0, 216), float)
     input_array = np.empty((0, 1512), float)
     
-    n_datasets= len(dflist_label)
+    n_scenarios = len(datasets_label)
+    n_datasets = len(datasets_label[0])
     
     for i in range(1, int(dflist_in[0].iloc[[-1]][0])+1):
-        for j in range(n_datasets):
-            input_array = np.append(input_array, np.array([dflist_in[0][dflist_in[0][0]==i].transpose().iloc[1].values.tolist()]), axis=0)
-            label_array = np.append(label_array, np.true_divide(np.array([dflist_label[j][dflist_label[j][0]==i].transpose().iloc[2].values.tolist()]), np.array([dflist_label[j][dflist_label[j][0]==i].transpose().iloc[1].values.tolist()])), axis=0)
+        for j in range(n_scenarios):
+            tmp=j*n_scenarios
+            for k in range(n_datasets):
+                input_array = np.append(input_array, np.array([dflist_in[j][dflist_in[j][0]==i].transpose().iloc[1].values.tolist()]), axis=0)
+                label_array = np.append(label_array, np.true_divide(np.array([dflist_label[tmp+k][dflist_label[tmp+k][0]==i].transpose().iloc[2].values.tolist()]), np.array([dflist_label[tmp+k][dflist_label[tmp+k][0]==i].transpose().iloc[1].values.tolist()])), axis=0)
 
-    return input_array, label_array, n_datasets;
-
-def get_multiple_training_data(datasets_in, datasets_label):
-    label_array = np.empty((0, 216), float)
-    input_array = np.empty((0, 1512), float)
-    for i in range(len(datasets_label)):
-        temp_in, temp_label, n_datasets = get_real_trainig_data(datasets_in[i], datasets_label[i])
-        input_array = np.append(input_array, temp_in, axis=0)
-        label_array = np.append(label_array, temp_label, axis=0)
-    return input_array, label_array, n_datasets, len(datasets_label);
+    return input_array, label_array, n_scenarios, n_datasets;
 
 def get_clean_trainig_data():
     dataset_in=pd.read_csv("MD30/clean/writer2_clean.csv", sep=";", header=None)
@@ -175,20 +181,20 @@ def compile_std_model(size_in, size_out):
     return model
     
 def prob_run(datasets_in, datasets_label):
-    input_array, label_array, n_datasets, n_scenarios = get_multiple_training_data(datasets_in, datasets_label)
+    input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_prob_model(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
-    model.fit(input_array, label_array, batch_size=n_datasets, epochs=250)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250)
     
     tf.keras.models.save_model(model, 'model_prob_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
 def std_run(datasets_in, datasets_label):
-    input_array, label_array, n_datasets, n_scenarios = get_multiple_training_data(datasets_in, datasets_label)
+    input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_std_model(np.shape(input_array)[1], np.shape(label_array)[1])
     
-    model.fit(input_array, label_array, batch_size=n_datasets, epochs=250)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=200)
     
     tf.keras.models.save_model(model, 'model_std_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
