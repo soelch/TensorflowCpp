@@ -185,7 +185,7 @@ def prob_run(datasets_in, datasets_label):
 
     model = compile_prob_model(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
-    model.fit(input_array, label_array, batch_size=n_datasets, epochs=50)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250, shuffle=True)
     
     tf.keras.models.save_model(model, 'model_prob_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
