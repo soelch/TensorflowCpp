@@ -142,7 +142,7 @@ def compile_prob_model(size_in, size_out, n_datasets):
     
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         lr,
-        decay_steps=500,
+        decay_steps=400,
         decay_rate=0.99,
         staircase=False)
     
@@ -180,53 +180,73 @@ def compile_std_model(size_in, size_out):
     
     return model
     
-def prob_run(datasets_in, datasets_label):
+def prob_run(datasets_in, datasets_label, datatype):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_prob_model(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
-    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=1000, shuffle=True)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250, shuffle=True)
     
-    tf.keras.models.save_model(model, 'model_prob_s'+str(n_scenarios)+'_b'+str(n_datasets))
+    tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
-def std_run(datasets_in, datasets_label):
+def std_run(datasets_in, datasets_label, datatype):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_std_model(np.shape(input_array)[1], np.shape(label_array)[1])
     
     model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250)
     
-    tf.keras.models.save_model(model, 'model_std_s'+str(n_scenarios)+'_b'+str(n_datasets))
+    tf.keras.models.save_model(model, 'model_std_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
 ##########################################
 
 #all of these need to contain the same amount of timesteps
 #also each set of datasets(i.e. sets of same sim settings) should contain same amount of datasets
 #otherwise, the batch size will not function as intended
-datasets_in = [["../shared/MD30/250steps/1.5vel/writer2.csv"], 
-               ["../shared/MD30/250steps/1.0vel/writer2.csv"]
-               ]
 
-gauss="4"
+datatype="30"
+gauss="1"
 
-datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.5vel/2/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.5vel/3/writer_after"+gauss+".csv",
-                   "../shared/MD30/250steps/1.5vel/4/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.5vel/5/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.5vel/6/writer_after"+gauss+".csv"],
-                  
-                  ["../shared/MD30/250steps/1.0vel/1/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.0vel/2/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.0vel/3/writer_after"+gauss+".csv",
-                   "../shared/MD30/250steps/1.0vel/4/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.0vel/5/writer_after"+gauss+".csv", 
-                   "../shared/MD30/250steps/1.0vel/6/writer_after"+gauss+".csv"]
-                  ]
+if(datatype=="30"):
+    datasets_in = [["../shared/MD30/250steps/1.5vel/writer2.csv"], 
+                   ["../shared/MD30/250steps/1.0vel/writer2.csv"]
+                   ]
 
+    datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/2/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/3/writer_after"+gauss+".csv",
+                       "../shared/MD30/250steps/1.5vel/4/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/5/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/6/writer_after"+gauss+".csv"],
+                      
+                      ["../shared/MD30/250steps/1.0vel/1/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/2/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/3/writer_after"+gauss+".csv",
+                       "../shared/MD30/250steps/1.0vel/4/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/5/writer_after"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/6/writer_after"+gauss+".csv"]
+                      ]
+if(datatype=="60"):
+    datasets_in = [#["../shared/MD60/500steps/1.5vel/writer2.csv"], 
+                   ["../shared/MD60/500steps/1.0vel/writer2.csv"]
+                   ]
 
+    datasets_label = [#["../shared/MD60/500steps/1.5vel/1/writer_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/2/writer_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/3/writer_after"+gauss+".csv",
+                      # "../shared/MD60/500steps/1.5vel/4/writer_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/5/writer_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/6/writer_after"+gauss+".csv"
+                      #],
+                      
+                      ["../shared/MD60/500steps/1.0vel/1/writer_after"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.0vel/2/writer_after"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.0vel/3/writer_after"+gauss+".csv",
+                       "../shared/MD60/500steps/1.0vel/4/writer_after"+gauss+".csv"
+                       ]
+                      ]
     
-prob_run(datasets_in, datasets_label)
+prob_run(datasets_in, datasets_label, datatype)
 
 
 
