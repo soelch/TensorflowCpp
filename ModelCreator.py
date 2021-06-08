@@ -204,7 +204,7 @@ def std_run(datasets_in, datasets_label, datatype):
 #also each set of datasets(i.e. sets of same sim settings) should contain same amount of datasets
 #otherwise, the batch size will not function as intended
 
-datatype="30"
+datatype="60"
 gauss="1"
 
 if(datatype=="30"):
@@ -231,18 +231,18 @@ if(datatype=="60"):
                    ["../shared/MD60/500steps/1.0vel/writer2.csv"]
                    ]
 
-    datasets_label = [#["../shared/MD60/500steps/1.5vel/1/writer_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/2/writer_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/3/writer_after"+gauss+".csv",
-                      # "../shared/MD60/500steps/1.5vel/4/writer_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/5/writer_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/6/writer_after"+gauss+".csv"
+    datasets_label = [#["../shared/MD60/500steps/1.5vel/1/writer60_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/2/writer60_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/3/writer60_after"+gauss+".csv",
+                      # "../shared/MD60/500steps/1.5vel/4/writer60_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/5/writer60_after"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/6/writer60_after"+gauss+".csv"
                       #],
                       
-                      ["../shared/MD60/500steps/1.0vel/1/writer_after"+gauss+".csv", 
-                       "../shared/MD60/500steps/1.0vel/2/writer_after"+gauss+".csv", 
-                       "../shared/MD60/500steps/1.0vel/3/writer_after"+gauss+".csv",
-                       "../shared/MD60/500steps/1.0vel/4/writer_after"+gauss+".csv"
+                      ["../shared/MD60/500steps/1.0vel/1/writer60_after"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.0vel/2/writer60_after"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.0vel/3/writer60_after"+gauss+".csv",
+                       "../shared/MD60/500steps/1.0vel/4/writer60_after"+gauss+".csv"
                        ]
                       ]
     
