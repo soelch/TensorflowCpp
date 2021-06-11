@@ -243,48 +243,53 @@ def std_run(datasets_in, datasets_label, datatype, ep):
 #otherwise, the batch size will not function as intended
 
 datatype="30"
-gauss="1"
+gauss=0
+
+if(gauss==0):
+    gauss="before"
+else:
+    gauss="after"+str(gauss)
 
 if(datatype=="30"):
     datasets_in = [["../shared/MD30/250steps/1.5vel/writer2.csv"], 
                    ["../shared/MD30/250steps/1.0vel/writer2.csv"]
                    ]
 
-    datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.5vel/2/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.5vel/3/writer_after"+gauss+".csv",
-                       "../shared/MD30/250steps/1.5vel/4/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.5vel/5/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.5vel/6/writer_after"+gauss+".csv"],
+    datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/2/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/3/writer_"+gauss+".csv",
+                       "../shared/MD30/250steps/1.5vel/4/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/5/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/6/writer_"+gauss+".csv"],
                       
-                      ["../shared/MD30/250steps/1.0vel/1/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.0vel/2/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.0vel/3/writer_after"+gauss+".csv",
-                       "../shared/MD30/250steps/1.0vel/4/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.0vel/5/writer_after"+gauss+".csv", 
-                       "../shared/MD30/250steps/1.0vel/6/writer_after"+gauss+".csv"]
+                      ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
+                       "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
                       ]
 if(datatype=="60"):
     datasets_in = [["../shared/MD60/500steps/1.5vel/writer2.csv"], 
                    ["../shared/MD60/500steps/1.0vel/writer2.csv"]
                    ]
 
-    datasets_label = [["../shared/MD60/500steps/1.5vel/1/writer60_after"+gauss+".csv", 
-                       "../shared/MD60/500steps/1.5vel/2/writer60_after"+gauss+".csv", 
-                       "../shared/MD60/500steps/1.5vel/3/writer60_after"+gauss+".csv",
-                      # "../shared/MD60/500steps/1.5vel/4/writer60_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/5/writer60_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/6/writer60_after"+gauss+".csv"
+    datasets_label = [["../shared/MD60/500steps/1.5vel/1/writer60_"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.5vel/2/writer60_"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.5vel/3/writer60_"+gauss+".csv",
+                      # "../shared/MD60/500steps/1.5vel/4/writer60_"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/5/writer60_"+gauss+".csv", 
+                      # "../shared/MD60/500steps/1.5vel/6/writer60_"+gauss+".csv"
                       ],
                       
-                      ["../shared/MD60/500steps/1.0vel/1/writer60_after"+gauss+".csv", 
-                       "../shared/MD60/500steps/1.0vel/2/writer60_after"+gauss+".csv", 
-                       "../shared/MD60/500steps/1.0vel/3/writer60_after"+gauss+".csv",
-                       #"../shared/MD60/500steps/1.0vel/4/writer60_after"+gauss+".csv"
+                      ["../shared/MD60/500steps/1.0vel/1/writer60_"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.0vel/2/writer60_"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.0vel/3/writer60_"+gauss+".csv",
+                       #"../shared/MD60/500steps/1.0vel/4/writer60_"+gauss+".csv"
                        ]
                       ]
     
-prob_run_modified(datasets_in, datasets_label, datatype, 5000)
+prob_run_modified(datasets_in, datasets_label, datatype, 2000)
 
 
 
