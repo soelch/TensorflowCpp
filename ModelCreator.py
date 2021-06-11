@@ -162,7 +162,7 @@ def compile_prob_model(size_in, size_out, n_datasets):
 def compile_prob_model_modified(size_in, size_out, n_datasets):
     model = tf.keras.models.Sequential([
       tf.keras.layers.InputLayer(input_shape=(size_in,), name="input"),
-      tfp.layers.DenseVariational(size_out+1, posterior_mean_field, prior_trainable, kl_weight=0.1/(250*6),#/batch_size <-- should this be batch size or total dataset/epoch size?
+      tfp.layers.DenseVariational(size_out+1, posterior_mean_field, prior_trainable, kl_weight=1/(250*12),#/batch_size <-- should this be batch size or total dataset/epoch size?
                                   kl_use_exact=False),
       tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=1e-7 + tf.nn.softplus(t[...,size_out:]*0.05))),
     ])
@@ -171,7 +171,7 @@ def compile_prob_model_modified(size_in, size_out, n_datasets):
     
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         lr,
-        decay_steps=400,
+        decay_steps=500,
         decay_rate=0.99,
         staircase=False)
     
@@ -289,7 +289,7 @@ if(datatype=="60"):
                        ]
                       ]
     
-prob_run_modified(datasets_in, datasets_label, datatype, 2000)
+prob_run_modified(datasets_in, datasets_label, datatype, 1500)
 
 
 
