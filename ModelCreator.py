@@ -159,6 +159,35 @@ def compile_prob_model(size_in, size_out, n_datasets):
     
     return model
 
+def compile_prob_model_modified(size_in, size_out, n_datasets):
+    model = tf.keras.models.Sequential([
+      tf.keras.layers.InputLayer(input_shape=(size_in,), name="input"),
+      tfp.layers.DenseVariational(size_out+1, posterior_mean_field, prior_trainable, kl_weight=0.1/(250*6),#/batch_size <-- should this be batch size or total dataset/epoch size?
+                                  kl_use_exact=False),
+      tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=1e-7 + tf.nn.softplus(t[...,size_out:]*0.05))),
+    ])
+    
+    lr = 0.0005
+    
+    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+        lr,
+        decay_steps=400,
+        decay_rate=0.99,
+        staircase=False)
+    
+    opt=tf.keras.optimizers.Adam(
+        learning_rate=lr_schedule,
+        name='adam_opt'
+    )
+    
+    negloglik = lambda y, y_pred: -y_pred.log_prob(y)
+    
+    model.compile(optimizer=opt,
+                  loss=negloglik,
+                  metrics=[tf.metrics.MeanAbsoluteError()])
+    
+    return model
+
 def compile_std_model(size_in, size_out):
     model = tf.keras.models.Sequential([
       tf.keras.layers.InputLayer(input_shape=size_in),
@@ -189,6 +218,15 @@ def prob_run(datasets_in, datasets_label, datatype):
     
     tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
+def prob_run_modified(datasets_in, datasets_label, datatype):
+    input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
+
+    model = compile_prob_model_modified(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
+    
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250, shuffle=True)
+    
+    tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
+
 def std_run(datasets_in, datasets_label, datatype):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
@@ -204,7 +242,7 @@ def std_run(datasets_in, datasets_label, datatype):
 #also each set of datasets(i.e. sets of same sim settings) should contain same amount of datasets
 #otherwise, the batch size will not function as intended
 
-datatype="60"
+datatype="30"
 gauss="1"
 
 if(datatype=="30"):
@@ -227,26 +265,26 @@ if(datatype=="30"):
                        "../shared/MD30/250steps/1.0vel/6/writer_after"+gauss+".csv"]
                       ]
 if(datatype=="60"):
-    datasets_in = [#["../shared/MD60/500steps/1.5vel/writer2.csv"], 
+    datasets_in = [["../shared/MD60/500steps/1.5vel/writer2.csv"], 
                    ["../shared/MD60/500steps/1.0vel/writer2.csv"]
                    ]
 
-    datasets_label = [#["../shared/MD60/500steps/1.5vel/1/writer60_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/2/writer60_after"+gauss+".csv", 
-                      # "../shared/MD60/500steps/1.5vel/3/writer60_after"+gauss+".csv",
+    datasets_label = [["../shared/MD60/500steps/1.5vel/1/writer60_after"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.5vel/2/writer60_after"+gauss+".csv", 
+                       "../shared/MD60/500steps/1.5vel/3/writer60_after"+gauss+".csv",
                       # "../shared/MD60/500steps/1.5vel/4/writer60_after"+gauss+".csv", 
                       # "../shared/MD60/500steps/1.5vel/5/writer60_after"+gauss+".csv", 
                       # "../shared/MD60/500steps/1.5vel/6/writer60_after"+gauss+".csv"
-                      #],
+                      ],
                       
                       ["../shared/MD60/500steps/1.0vel/1/writer60_after"+gauss+".csv", 
                        "../shared/MD60/500steps/1.0vel/2/writer60_after"+gauss+".csv", 
                        "../shared/MD60/500steps/1.0vel/3/writer60_after"+gauss+".csv",
-                       "../shared/MD60/500steps/1.0vel/4/writer60_after"+gauss+".csv"
+                       #"../shared/MD60/500steps/1.0vel/4/writer60_after"+gauss+".csv"
                        ]
                       ]
     
-prob_run(datasets_in, datasets_label, datatype)
+prob_run_modified(datasets_in, datasets_label, datatype)
 
 
 
