@@ -99,6 +99,8 @@ const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::st
 
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size, int divisor);
 
+void VecToCSV(std::vector<std::vector<float>> vec2d);
+
 void VecToCSV(std::vector<float> vec);
 
 void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, tensorflow::Tensor& label, std::string label_path, int label_column);

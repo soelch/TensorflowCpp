@@ -29,28 +29,33 @@ int main(){
 	std::vector<Tensor> results;
     float loss;
 	std::vector<float> res;
+	std::vector<std::vector<float>> csvWrite;
 	
-	
+	const int compTime=249;
 	//get names with      saved_model_cli show --dir ~/local/tensorflow_cc-master/test/model --all
 	//serving_default_input appears to increment with each new model
 	std::string input_name = model.GetSignatures().at("serving_default").inputs().begin()->second.name();
 	std::string output_name=model.GetSignatures().at("serving_default").outputs().begin()->second.name();
 	//std::vector<std::string> output_name{"StatefulPartitionedCall:0"};
 	std::vector<Tensor> out_tensors;
-	Status runStatus = model.GetSession()->Run({{input_name, input[100]}}, {output_name}, {}, &results);
-	std::cout<<runStatus<<std::endl;
 	
+	for(int i=0; i<100; i++){
+		Status runStatus = model.GetSession()->Run({{input_name, input[compTime]}}, {output_name}, {}, &results);
+		std::cout<<runStatus<<std::endl;
+		
+		
+		res=TensorToVec(results[0])[0];
+		std::cout<<res<<std::endl;
+		std::vector<float> AB = res;
+		res-=TensorToVec(label[compTime])[0];
+		float avg=0;
+		for(float number : res) avg+=std::abs(number);
+		std::cout<<avg/res.size()<<std::endl;
+		AB.insert(AB.end(), res.begin(), res.end());
+		csvWrite.push_back(AB);
+	}
 	
-	
-	res=TensorToVec(results[0])[0];
-	std::cout<<res<<std::endl;
-	std::vector<float> AB = res;
-	res-=TensorToVec(label[65])[0];
-	float avg=0;
-	for(float number : res) avg+=std::abs(number);
-	std::cout<<avg/res.size()<<std::endl;
-	AB.insert(AB.end(), res.begin(), res.end());
-	VecToCSV(AB);
+	VecToCSV(csvWrite);
 	
 	return 1;
 }
