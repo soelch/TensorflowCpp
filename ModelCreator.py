@@ -209,30 +209,30 @@ def compile_std_model(size_in, size_out):
     
     return model
     
-def prob_run(datasets_in, datasets_label, datatype):
+def prob_run(datasets_in, datasets_label, datatype, ep):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_prob_model(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
-    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250, shuffle=True)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=ep, shuffle=True)
     
     tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
-def prob_run_modified(datasets_in, datasets_label, datatype):
+def prob_run_modified(datasets_in, datasets_label, datatype, ep):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_prob_model_modified(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets)
     
-    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250, shuffle=True)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=ep, shuffle=True)
     
     tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
-def std_run(datasets_in, datasets_label, datatype):
+def std_run(datasets_in, datasets_label, datatype, ep):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
 
     model = compile_std_model(np.shape(input_array)[1], np.shape(label_array)[1])
     
-    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=250)
+    model.fit(input_array, label_array, batch_size=n_datasets*n_scenarios, epochs=ep)
     
     tf.keras.models.save_model(model, 'model_std_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
 
@@ -284,7 +284,7 @@ if(datatype=="60"):
                        ]
                       ]
     
-prob_run_modified(datasets_in, datasets_label, datatype)
+prob_run_modified(datasets_in, datasets_label, datatype, 1000)
 
 
 
