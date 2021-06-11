@@ -288,6 +288,19 @@ const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::st
 	return vec;
 }
 
+void VecToCSV(std::vector<std::vector<float>> vec2d){
+	if(std::remove("output.csv")==0) std::cout<<"output.csv was deleted"<<std::endl;
+	std::ofstream myfile("output.csv");
+    
+	for(std::vector<float> vec : vec2d){
+		for(float number : vec){
+			myfile << number << '\t';
+			myfile << "," ;
+		}
+		myfile << std::endl;
+	}
+}
+
 void VecToCSV(std::vector<float> vec){
 	if(std::remove("output.csv")==0) std::cout<<"output.csv was deleted"<<std::endl;
 	std::ofstream myfile("output.csv");

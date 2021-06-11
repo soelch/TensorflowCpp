@@ -23,6 +23,11 @@ else:
     index=17
 
 df = pd.read_csv('output.csv', header=None)
+#this averages all results, if output.csv contains more than one  line
+if(df.shape[0]>1):
+    df=df.mean(axis=0).transpose()
+
+
 actual = pd.read_csv('writer1'+addendum+'.csv', header=None, sep=';')
 fig, ax = plt.subplots()
 #print(df.values.tolist())
@@ -61,7 +66,7 @@ elif(plotType=="comparison"):
     print(actualAvgList)
     ax.plot(actualAvgList, color="red")
 elif(plotType=="unfilteredComparison"):
-    ax.plot(df.values.tolist()[0][:216])
+    ax.plot(df.values.tolist()[:216])
     ax.plot(actual[actual[0]==timestep].iloc[:,index].tolist(), color="red")
 else:
     print("Provide plotType (unfiltered/averaged/comparison/unfilteredComparison)")
