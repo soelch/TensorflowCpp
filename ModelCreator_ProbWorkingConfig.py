@@ -60,19 +60,12 @@ def run_comparison_prob(model,b,kl):
     plt.show()
     
     plt.plot(d_out)
-    res=model(d_in).mean()[0]
-    plt.plot(res,'go')
-    plt.show()
-    
-    plt.plot(d_out)
-    plt.plot(np.arange(17,216,36), np.mean(np.array_split(res,6), axis=1),'go')
-    plt.show()
-    
-    for i in range(99):
-        res+=model(d_in).mean()[0]
-    res=res*0.01
-    plt.plot(d_out)
     res=np.mean(np.array_split(res,6), axis=1)
+    plt.plot(model(d_in).mean()[0],'go')
+    plt.show()
+    
+    plt.plot(d_out)
+    res=np.mean(np.array_split(model(d_in).mean()[0],6), axis=1)
     plt.plot(np.arange(17,216,36), res,'go')
     plt.show()
 
@@ -94,19 +87,16 @@ def run_comparison_std(model,b,kl):
 
 def prior(kernel_size, bias_size, dtype=None):
     n = kernel_size + bias_size
-    return lambda t: tfd.Independent(tfd.Normal(loc=tf.zeros(n, dtype=dtype), scale=.1), 
+    return lambda t: tfd.Independent(tfd.Normal(loc=tf.zeros(n, dtype=dtype), scale=1), 
                                      reinterpreted_batch_ndims=1)
 
 def prior_trainable(kernel_size, bias_size=0, dtype=None):
   n = kernel_size + bias_size
-  c = np.log(np.expm1(.07))
+  c = np.log(np.expm1(1))
   return tf.keras.Sequential([
-      tfp.layers.VariableLayer(2*n, dtype=dtype, 
-                               #initializer=tfp.layers.BlockwiseInitializer(['zeros',
-                               #tf.keras.initializers.Constant(np.log(np.expm1(1.)))], sizes=[n, n])
-                               ),
+      tfp.layers.VariableLayer(2*n, dtype=dtype),
       tfp.layers.DistributionLambda(lambda t: tfd.Independent(
-          tfd.Normal(loc=t[...,:n], scale=tf.nn.softplus(c+t[..., n:])),
+          tfd.Normal(loc=t[...,:n]+1, scale=1e-10 + tf.nn.softplus(c + t[..., n:])),#
           reinterpreted_batch_ndims=1)),
   ])
 
@@ -120,14 +110,12 @@ def posterior(kernel_size, bias_size, dtype=None):
 
 def posterior_mean_field(kernel_size, bias_size=0, dtype=None):
   n = kernel_size + bias_size
-  c = np.log(np.expm1(.000001))#e-7
+  c = np.log(np.expm1(1))#e-7
   return tf.keras.Sequential([
-      tfp.layers.VariableLayer(2*n, dtype=dtype, 
-                               #initializer=tfp.layers.BlockwiseInitializer(['zeros',
-                               #tf.keras.initializers.Constant(np.log(np.expm1(1.)))], sizes=[n, n])
-                               ),
+      tfp.layers.VariableLayer(2 * n, dtype=dtype),
       tfp.layers.DistributionLambda(lambda t: tfd.Independent(
-          tfd.Normal(loc=t[..., :n], scale=tf.nn.softplus(c + t[..., n:])),
+          tfd.Normal(loc=t[..., :n]+1,
+                     scale=1e-10 + tf.nn.softplus(c + t[..., n:])),#*0.001
           reinterpreted_batch_ndims=1)),
   ])
 
@@ -241,18 +229,18 @@ def act_final(arg):
 def compile_prob_model_modified(size_in, size_out, n_datasets, kl_mod):
     model = tf.keras.models.Sequential([
       tf.keras.layers.InputLayer(input_shape=(size_in,), name="input"),
-      tfp.layers.DenseVariational(size_out*2, posterior_mean_field, prior_trainable, kl_weight=kl_mod, #/batch_size <-- should this be batch size or total dataset/epoch size?
-                                   kl_use_exact=False, activation=act_final),#tf.keras.layers.LeakyReLU(alpha=0.01)
-      #tf.keras.layers.Dense(2*size_out, activation=act_final, kernel_initializer=tf.keras.initializers.RandomUniform(minval=1/1500, maxval=2/1500),),
-      tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=tf.nn.softplus(t[...,size_out:]))),
+      # tfp.layers.DenseVariational(size_out*2, posterior_mean_field, prior_trainable, kl_weight=kl_mod,#/batch_size <-- should this be batch size or total dataset/epoch size?
+      #                             kl_use_exact=False, activation="relu"),#tf.keras.layers.LeakyReLU(alpha=0.01)
+      tf.keras.layers.Dense(2*size_out, activation=act_final, kernel_initializer=tf.keras.initializers.RandomUniform(minval=1/10000, maxval=2/10000),),
+      tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=0.00001+tf.nn.softplus(t[...,size_out:]))),
     ])
     
-    lr = 0.001
+    lr = 0.0002
     
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         lr,
         decay_steps=500,
-        decay_rate=0.95,
+        decay_rate=0.994,
         staircase=False)
     
     opt=tf.keras.optimizers.Adam(
@@ -357,18 +345,18 @@ if(datatype=="30"):
                    ]
 
     datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_"+gauss+".csv", 
-                        "../shared/MD30/250steps/1.5vel/2/writer_"+gauss+".csv", 
-                        "../shared/MD30/250steps/1.5vel/3/writer_"+gauss+".csv",
-                        "../shared/MD30/250steps/1.5vel/4/writer_"+gauss+".csv", 
-                        "../shared/MD30/250steps/1.5vel/5/writer_"+gauss+".csv", 
-                        "../shared/MD30/250steps/1.5vel/6/writer_"+gauss+".csv"],
+                       "../shared/MD30/250steps/1.5vel/2/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/3/writer_"+gauss+".csv",
+                       "../shared/MD30/250steps/1.5vel/4/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/5/writer_"+gauss+".csv", 
+                       "../shared/MD30/250steps/1.5vel/6/writer_"+gauss+".csv"],
                       
-                        # ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
-                        #  "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
+                       # ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
+                       #  "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
+                       #  "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
+                       #  "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
+                       #  "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
+                       #  "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
                       ]
 if(datatype=="60"):
     datasets_in = [["../shared/MD60/500steps/1.5vel/writer2.csv"], 
@@ -395,22 +383,9 @@ if(datatype=="60"):
 
 ep=[1000,1000,1000,1000,5000,5000]
 batch_sizes=[100,100,100,100,100,100]
-kl_mod=1/(1500/1)*10
-
-
+kl_mod=1/(3000/1)
 
 prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl_mod)
-
-# =============================================================================
-# input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
-# d_in, d_out= get_comparison_data()
-#    
-# plt.plot(d_out)
-# res=np.mean(np.array_split(np.mean(label_array[1194:1200], axis=0),6), axis=1)
-# plt.plot(np.arange(17,216,36),res,'go')
-# plt.show()
-# =============================================================================
-
 
 
 
