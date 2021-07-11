@@ -67,13 +67,13 @@ public:
 	NeuralNet():input_size(0), middle_size(0), output_size(0), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()){}
     NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()) {} 
 	void CreateNN(int in, int middle, int out);
-    Input XavierInit(Scope scope, int in_chan, int out_chan);
+    Input Init(Scope scope, int in_chan, int out_chan);
     Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);
-    Status CreateGraphForNN();
+    Status CreateNNGraph();
     Status CreateOptimizationGraph(float learning_rate);
 	Status UpdateOptimizationGraph(float learning_rate);
     Status Initialize();
-    Status TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
+    Status Train(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
 	Status SetPrevInput(tensorflow::Tensor t);
 	Status SetPrevOutput(tensorflow::Tensor t);
     Status ValidateNN(Tensor& image_batch, Tensor& label_batch, std::vector<float>& results);

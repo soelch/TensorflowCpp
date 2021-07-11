@@ -22,7 +22,7 @@ int main(){
     float loss;
 	std::vector<float> res;
 	NeuralNet NN(input[0].dim_size(1), input[0].dim_size(1), label[0].dim_size(1));
-	NN.CreateGraphForNN();
+	NN.CreateNNGraph();
 	NN.CreateOptimizationGraph((float)config[0][0]);
 	NN.Initialize();
 	
@@ -31,7 +31,7 @@ int main(){
 	const int nBatches=input.size();
 	for(int i=0; i<config[0][1]; i++){ 
 		for(int j=0; j<nBatches; j++){  //<---does not necessarily start at 0!!!!!!!!
-			NN.TrainNN(input[j], label[j], results, loss); 
+			NN.Train(input[j], label[j], results, loss); 
 			total+=loss;
 		}
 

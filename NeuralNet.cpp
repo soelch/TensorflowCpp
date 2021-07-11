@@ -1,4 +1,3 @@
-
 #include "NeuralNet.h"
 
 
@@ -18,7 +17,7 @@ void NeuralNet::CreateNN(int in, int middle, int out){
 	output_size=out;
 }
 
-Input NeuralNet::XavierInit(Scope scope, int in_chan, int out_chan)
+Input NeuralNet::Init(Scope scope, int in_chan, int out_chan)
 {
     float std;
     Tensor t;
@@ -37,7 +36,7 @@ Input NeuralNet::AddDenseLayer(string idx, Scope scope, int in_units, int out_un
     TensorShape sp = {in_units, out_units};
     m_vars["W"+idx] = Variable(scope.WithOpName("W"), sp, DT_FLOAT);
     m_shapes["W"+idx] = sp;
-    m_assigns["W"+idx+"_assign"] = Assign(scope.WithOpName("W_assign"), m_vars["W"+idx], XavierInit(scope, in_units, out_units));
+    m_assigns["W"+idx+"_assign"] = Assign(scope.WithOpName("W_assign"), m_vars["W"+idx], Init(scope, in_units, out_units));
     sp = {out_units};
     m_vars["B"+idx] = Variable(scope.WithOpName("B"), sp, DT_FLOAT);
     m_shapes["B"+idx] = sp;
@@ -88,14 +87,14 @@ Status NeuralNet::FreezeSave(string& file_name)
 }
 */
 
-Status NeuralNet::CreateGraphForNN()
+Status NeuralNet::CreateNNGraph()
 {
     input_batch_var = Placeholder(t_root.WithOpName(input_name), DT_FLOAT);
 
     int in_units = input_size;
     int out_units = middle_size;
     Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
-    auto relu1 = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_batch_var);
+    auto relu = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_batch_var);
 /*
 	in_units = out_units;
     out_units = middle_size;
@@ -105,7 +104,7 @@ Status NeuralNet::CreateGraphForNN()
     in_units = out_units;
     out_units = output_size;
     Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
-    auto logits = AddDenseLayer("2", scope_dense3, in_units, out_units, false, relu1);
+    auto logits = AddDenseLayer("2", scope_dense3, in_units, out_units, false, relu);
 
     out_classification =Multiply(t_root.WithOpName(out_name), logits, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
     return t_root.status();
@@ -191,7 +190,7 @@ Status NeuralNet::Initialize()
     return Status::OK();
 }
 
-Status NeuralNet::TrainNN(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss)
+Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss)
 {
     if(!t_root.ok())
         return t_root.status();
