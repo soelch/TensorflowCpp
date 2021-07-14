@@ -66,7 +66,7 @@ Status NeuralNet::FreezeSave(string& file_name)
         idx++;
     }
     GraphDef graph_def;
-    TF_CHECK_OK(t_root.ToGraphDef(&graph_def));
+    TF_CHECK_OK(net_scope.ToGraphDef(&graph_def));
     //call the utility function (modified)
     SavedModelBundle saved_model_bundle;
     SignatureDef signature_def;
@@ -89,52 +89,52 @@ Status NeuralNet::FreezeSave(string& file_name)
 
 Status NeuralNet::CreateNNGraph()
 {
-    input_batch_var = Placeholder(t_root.WithOpName(input_name), DT_FLOAT);
+    input_batch_var = Placeholder(net_scope.WithOpName(input_name), DT_FLOAT);
 
     int in_units = input_size;
     int out_units = middle_size;
-    Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
+    Scope scope_dense1 = net_scope.NewSubScope("Dense1_layer");
     auto relu = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_batch_var);
 /*
 	in_units = out_units;
     out_units = middle_size;
-    Scope scope_dense2 = t_root.NewSubScope("Dense2_layer");
+    Scope scope_dense2 = net_scope.NewSubScope("Dense2_layer");
     auto relu2 = AddDenseLayer("2", scope_dense2, in_units, out_units, true, relu1);
 */	
     in_units = out_units;
     out_units = output_size;
-    Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
+    Scope scope_dense3 = net_scope.NewSubScope("Dense3_layer");
     auto logits = AddDenseLayer("2", scope_dense3, in_units, out_units, false, relu);
 
-    out_classification =Multiply(t_root.WithOpName(out_name), logits, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
-    return t_root.status();
+    out_classification =Multiply(net_scope.WithOpName(out_name), logits, 1.0f);//Sigmoid(net_scope.WithOpName(out_name), logits);
+    return net_scope.status();
 }
 
 Status NeuralNet::CreateOptimizationGraph(float learning_rate)
 {
-    input_labels_var = Placeholder(t_root.WithOpName("inputL"), DT_FLOAT);
-    Scope scope_loss = t_root.NewSubScope("Loss_scope");
-    out_loss_var = Mean(scope_loss.WithOpName("Loss"), SquaredDifference(scope_loss, out_classification, input_labels_var), {0});
+    label_placeholder = Placeholder(net_scope.WithOpName("inputL"), DT_FLOAT);
+    Scope scope_loss = net_scope.NewSubScope("Loss_scope");
+    out_loss_var = Mean(scope_loss.WithOpName("Loss"), SquaredDifference(scope_loss, out_classification, label_placeholder), {0});
     TF_CHECK_OK(scope_loss.status());
     for(pair<string, Output> i: m_vars)
         v_weights_biases.push_back(i.second);
     
-    TF_CHECK_OK(AddSymbolicGradients(t_root, {out_loss_var}, v_weights_biases, &grad_outputs));
+    TF_CHECK_OK(AddSymbolicGradients(net_scope, {out_loss_var}, v_weights_biases, &grad_outputs));
     int index = 0;
     for(pair<string, Output> i: m_vars)
     {
         //Applying Adam
         string s_index = to_string(index);
-        auto m_var = Variable(t_root, m_shapes[i.first], DT_FLOAT);
-        auto v_var = Variable(t_root, m_shapes[i.first], DT_FLOAT);
-        m_assigns["m_assign"+s_index] = Assign(t_root, m_var, Input::Initializer(0.f, m_shapes[i.first]));
-        m_assigns["v_assign"+s_index] = Assign(t_root, v_var, Input::Initializer(0.f, m_shapes[i.first]));
+        auto m_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
+        auto v_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
+        m_assigns["m_assign"+s_index] = Assign(net_scope, m_var, Input::Initializer(0.f, m_shapes[i.first]));
+        m_assigns["v_assign"+s_index] = Assign(net_scope, v_var, Input::Initializer(0.f, m_shapes[i.first]));
 
-        auto adam = ApplyAdam(t_root, i.second, m_var, v_var, 0.f, 0.f, learning_rate, 0.9f, 0.999f, 0.00000001f, {grad_outputs[index]});
+        auto adam = ApplyAdam(net_scope, i.second, m_var, v_var, 0.f, 0.f, learning_rate, 0.9f, 0.999f, 0.00000001f, {grad_outputs[index]});
         v_out_grads.push_back(adam.operation);
         index++;
     }
-    return t_root.status();
+    return net_scope.status();
 }
 
 Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
@@ -143,7 +143,7 @@ Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
     for(pair<string, Output> i: m_vars)
         v_weights_biases.push_back(i.second);
     
-    TF_CHECK_OK(AddSymbolicGradients(t_root, {out_loss_var}, v_weights_biases, &grad_outputs));
+    TF_CHECK_OK(AddSymbolicGradients(net_scope, {out_loss_var}, v_weights_biases, &grad_outputs));
     */
 	v_out_grads.clear();
 	std::map<string, Output> m_assigns_new;
@@ -152,12 +152,12 @@ Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
     {
         //Applying Adam
         string s_index = to_string(index);
-        auto m_var = Variable(t_root, m_shapes[i.first], DT_FLOAT);
-        auto v_var = Variable(t_root, m_shapes[i.first], DT_FLOAT);
-        m_assigns_new["m_assign"+s_index] = Assign(t_root, m_var, Input::Initializer(0.f, m_shapes[i.first]));
-        m_assigns_new["v_assign"+s_index] = Assign(t_root, v_var, Input::Initializer(0.f, m_shapes[i.first]));
+        auto m_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
+        auto v_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
+        m_assigns_new["m_assign"+s_index] = Assign(net_scope, m_var, Input::Initializer(0.f, m_shapes[i.first]));
+        m_assigns_new["v_assign"+s_index] = Assign(net_scope, v_var, Input::Initializer(0.f, m_shapes[i.first]));
 
-        auto adam = ApplyAdam(t_root, i.second, m_var, v_var, 0.f, 0.f, learning_rate, 0.9f, 0.999f, 0.00000001f, {grad_outputs[index]});
+        auto adam = ApplyAdam(net_scope, i.second, m_var, v_var, 0.f, 0.f, learning_rate, 0.9f, 0.999f, 0.00000001f, {grad_outputs[index]});
         v_out_grads.push_back(adam.operation);
         index++;
     }
@@ -167,22 +167,22 @@ Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
 
     TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
 	
-    return t_root.status();
+    return net_scope.status();
 }
 
 Status NeuralNet::Initialize()
 {
-    if(!t_root.ok())
-        return t_root.status();
+    if(!net_scope.ok())
+        return net_scope.status();
     
     std::vector<Output> ops_to_run;
     for(pair<string, Output> i: m_assigns)
         ops_to_run.push_back(i.second);
-    t_session = std::unique_ptr<ClientSession>(new ClientSession(t_root));
+    t_session = std::unique_ptr<ClientSession>(new ClientSession(net_scope));
     TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
     /* uncomment if you want visualization of the model graph
     GraphDef graph;
-    TF_RETURN_IF_ERROR(t_root.ToGraphDef(&graph));
+    TF_RETURN_IF_ERROR(net_scope.ToGraphDef(&graph));
     SummaryWriterInterface* w;
     TF_CHECK_OK(CreateSummaryFileWriter(1, 0, "/Users/bennyfriedman/Code/TF2example/TF2example/graphs", ".cnn-graph", Env::Default(), &w));
     TF_CHECK_OK(w->WriteGraph(0, make_unique<GraphDef>(graph)));
@@ -192,13 +192,13 @@ Status NeuralNet::Initialize()
 
 Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss)
 {
-    if(!t_root.ok())
-        return t_root.status();
+    if(!net_scope.ok())
+        return net_scope.status();
     
     std::vector<Tensor> out_tensors;
 
 	
-    TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
+    TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 	
     loss = tensorMean(out_tensors[0]);
 	
@@ -230,8 +230,8 @@ Status NeuralNet::SetPrevOutput(tensorflow::Tensor t){
 
 Status NeuralNet::Predict(Tensor image, std::vector<float>& result)
 {
-    if(!t_root.ok())
-        return t_root.status();
+    if(!net_scope.ok())
+        return net_scope.status();
     
     std::vector<Tensor> out_tensors;
     //Inputs: image, drop rate 1 and skip drop.

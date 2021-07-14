@@ -9,6 +9,8 @@ Created on Mon Feb 22 17:43:24 2021
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # or any {'0', '1', '2', '3'}
 
+import time
+
 #suppresses deprecation warnings (not relevant, as long as tf 2.3 is used)
 import tensorflow.python.util.deprecation as deprecation
 deprecation._PRINT_DEPRECATION_WARNINGS = False
@@ -21,7 +23,7 @@ import pandas as pd
 tf.keras.backend.set_floatx('float32')
 import seaborn as sns
 from matplotlib import pyplot as plt
-from tensorflow.keras import backend as K
+
 
 sns.reset_defaults()
 #sns.set_style('whitegrid')
@@ -29,6 +31,19 @@ sns.reset_defaults()
 sns.set_context(context='talk',font_scale=0.7)
 
 tfd = tfp.distributions
+
+class timecallback(tf.keras.callbacks.Callback):
+    def __init__(self):
+        self.times = []
+        # use this value as reference to calculate cummulative time taken
+        self.current = time.process_time()
+    def on_epoch_end(self,epoch,logs = {}):
+        self.times.append(time.process_time() - self.current)
+        self.current = time.process_time()
+    def on_train_end(self,logs = {}):
+        print("Average Time: "+str(np.sum(self.times)/len(self.times)))
+        print("Total Time: "+str(np.sum(self.times)))
+        print(len(self.times))
 
 def plot(hist):
     plt.plot(hist)
@@ -173,7 +188,7 @@ def get_real_trainig_data(datasets_in, datasets_label):
     
     for i in range(1, int(dflist_in[0].iloc[[-1]][0])+1):
         for j in range(n_scenarios):
-            tmp=j*n_scenarios
+            tmp=j*n_datasets
             for k in range(n_datasets):
                 input_array = np.append(input_array, np.array([dflist_in[j][dflist_in[j][0]==i].transpose().iloc[1].values.tolist()]), axis=0)
                 label_array = np.append(label_array, np.true_divide(np.array([dflist_label[tmp+k][dflist_label[tmp+k][0]==i].transpose().iloc[2].values.tolist()]), np.array([dflist_label[tmp+k][dflist_label[tmp+k][0]==i].transpose().iloc[1].values.tolist()])), axis=0)
@@ -323,19 +338,32 @@ def prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl
 
 def std_run(datasets_in, datasets_label, datatype, ep, batch_sizes):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
+    
+    timetaken = timecallback()
 
     model = compile_std_model(np.shape(input_array)[1], np.shape(label_array)[1])
     loss=[]
     mae=[]
     kl_mod=0
     for i in range(len(ep)):
-        temp=model.fit(input_array, label_array, batch_size=batch_sizes[i], epochs=ep[i], shuffle=True)
+        temp=model.fit(input_array, label_array, batch_size=batch_sizes[i], epochs=ep[i], shuffle=True,callbacks = [timetaken])
         run_comparison_std(model,batch_sizes[i],kl_mod)
         loss.extend(temp.history["loss"])
         mae.extend(temp.history["mean_absolute_error"])
-    plot(loss)
+    #plot(loss)
     
     tf.keras.models.save_model(model, 'model_std_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
+    
+def compare(tstep, vel, mtype, mdtype, ndata, ndtype, additional):
+    a=np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(tstep)+"_in.csv"),axis=0)
+    comp=np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(tstep)+"_comp.csv")
+    
+    model = tf.keras.models.load_model("model_"+mtype+"_"+mdtype+"_s"+str(ndtype)+"_b"+str(ndata)+additional)
+
+    res=model.predict(a)
+    plt.plot(np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res[0],6), axis=1),"go")
+    plt.plot(np.arange(0,50.1,0.1),comp)
+    plt.show()
 
 ##########################################
 
@@ -353,7 +381,7 @@ else:
 
 if(datatype=="30"):
     datasets_in = [["../shared/MD30/250steps/1.5vel/writer2.csv"], 
-                    #["../shared/MD30/250steps/1.0vel/writer2.csv"]
+                    ["../shared/MD30/250steps/1.0vel/writer2.csv"]
                    ]
 
     datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_"+gauss+".csv", 
@@ -363,13 +391,13 @@ if(datatype=="30"):
                         "../shared/MD30/250steps/1.5vel/5/writer_"+gauss+".csv", 
                         "../shared/MD30/250steps/1.5vel/6/writer_"+gauss+".csv"],
                       
-                        # ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
-                        #  "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
-                      ]
+                         ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
+                           "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
+                           "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
+                           "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
+                           "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
+                           "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
+                       ]
 if(datatype=="60"):
     datasets_in = [["../shared/MD60/500steps/1.5vel/writer2.csv"], 
                    ["../shared/MD60/500steps/1.0vel/writer2.csv"]
@@ -393,13 +421,26 @@ if(datatype=="60"):
 
 
 
-ep=[1000,1000,1000,1000,5000,5000]
-batch_sizes=[100,100,100,100,100,100]
-kl_mod=1/(1500/1)*10
+ep=[2500]
+batch_sizes=[100]
+kl_mod=1/(1500/1)*10 
+
+
+std_run(datasets_in, datasets_label, datatype, ep, batch_sizes)
+#prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl_mod)
 
 
 
-prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl_mod)
+tstep=200
+vel=1.5
+mtype="std"
+mdtype="30"
+ndata=6
+ndtype=2
+additional=""
+
+#compare(tstep, vel, mtype, mdtype, ndata, ndtype, additional)
+
 
 # =============================================================================
 # input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
