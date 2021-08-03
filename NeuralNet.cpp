@@ -218,20 +218,12 @@ Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<st
     
     std::vector<Tensor> out_tensors;
 
-	
-
     TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 
 	
     loss = tensorMean(out_tensors[0]);
-	
 	results=TensorToVec(out_tensors[1]);
-	/*
-    auto mat1 = label_batch.matrix<float>();
-    auto mat2 = out_tensors[1].matrix<float>();
-    for(int i = 0; i < mat1.dimension(0); i++)
-        results.push_back((fabs(mat2(i, 0) - mat1(i, 0)) > 0.5f)? 0 : 1);
-	*/
+
     return Status::OK();
 }
 

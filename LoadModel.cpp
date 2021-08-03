@@ -66,9 +66,6 @@ int main(){
 		std::cout<<res<<std::endl;
 		std::vector<float> AB = res;
 		res-=TensorToVec(label[compTime])[0];
-		float avg=0;
-		for(float number : res) avg+=std::abs(number);
-		std::cout<<avg/res.size()<<std::endl;
 		AB.insert(AB.end(), res.begin(), res.end());
 		csvWrite.push_back(AB);
 	}
