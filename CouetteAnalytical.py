@@ -28,10 +28,10 @@ spaceStepSize=2.5
 nSpaceSteps=12
 lower=50-3.75
 upper=50-31.25
-maxVel=1.0
+maxVel=1.5
 acc=100
 vis=2.64
-t=1500
+t=5000
 time=-0.125+0.25*t
 spaceSteps=np.arange(upper, lower+1,spaceStepSize)
 spaceStepscomp=np.arange(0, 50.1,0.1)
@@ -69,7 +69,7 @@ plt.plot(np.arange(3.75, 31.25+1,spaceStepSize),d_filtered,"go")
 plt.show()
 
 np.savetxt("../shared/MD30/analytical/"+str(maxVel)+"/"+str(t)+"_in.csv", b)
-np.savetxt("../shared/MD30/analytical/"+str(maxVel)+"/"+str(t)+"_comp.csv", compReal)
+np.savetxt("../shared/MD30/analytical/"+str(maxVel)+"/"+str(t)+"_comp.csv", np.transpose(np.vstack((np.arange(0, 50.1,0.1),compReal))),header="x,y",comments='',delimiter=",", fmt='%f')
 #load these with a=np.genfromtxt("..shared/MD30...")
 print(a)
 
