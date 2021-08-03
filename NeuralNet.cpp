@@ -48,8 +48,20 @@ Input NeuralNet::AddDenseLayer(string idx, Scope scope, int in_units, int out_un
         return dense;
 }
 
-
-
+Output NeuralNet::AddOutLayer(Scope scope, int in_units, int out_units, Input input)
+{
+	std::string idx="2";
+    TensorShape sp = {in_units, out_units};
+    m_vars["W"+idx] = Variable(scope.WithOpName("W"), sp, DT_FLOAT);
+    m_shapes["W"+idx] = sp;
+    m_assigns["W"+idx+"_assign"] = Assign(scope.WithOpName("W_assign"), m_vars["W"+idx], Init(scope, in_units, out_units));
+    sp = {out_units};
+    m_vars["B"+idx] = Variable(scope.WithOpName("B"), sp, DT_FLOAT);
+    m_shapes["B"+idx] = sp;
+    m_assigns["B"+idx+"_assign"] = Assign(scope.WithOpName("B_assign"), m_vars["B"+idx], Input::Initializer(0.f, sp));
+    auto out = Add(scope.WithOpName("Dense_b"), MatMul(scope.WithOpName("Dense_w"), input, m_vars["W"+idx]), m_vars["B"+idx]);
+    return out;
+}
 
 
 /*
@@ -70,7 +82,7 @@ Status NeuralNet::FreezeSave(string& file_name)
     //call the utility function (modified)
     SavedModelBundle saved_model_bundle;
     SignatureDef signature_def;
-    (*signature_def.mutable_inputs())[input_batch_var.name()].set_name(input_batch_var.name());
+    (*signature_def.mutable_inputs())[input_placeholder.name()].set_name(input_placeholder.name());
     (*signature_def.mutable_outputs())[out_classification.name()].set_name(out_classification.name());
     MetaGraphDef* meta_graph_def = &saved_model_bundle.meta_graph_def;
     (*meta_graph_def->mutable_signature_def())["signature_def"] = signature_def;
@@ -89,24 +101,30 @@ Status NeuralNet::FreezeSave(string& file_name)
 
 Status NeuralNet::CreateNNGraph()
 {
-    input_batch_var = Placeholder(t_root.WithOpName(input_name), DT_FLOAT);
+    input_placeholder = Placeholder(t_root.WithOpName(input_name), DT_FLOAT);
 
     int in_units = input_size;
     int out_units = middle_size;
     Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
-    auto relu = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_batch_var);
+    auto relu = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_placeholder);
 /*
 	in_units = out_units;
     out_units = middle_size;
     Scope scope_dense2 = t_root.NewSubScope("Dense2_layer");
     auto relu2 = AddDenseLayer("2", scope_dense2, in_units, out_units, true, relu1);
-*/	
+
     in_units = out_units;
     out_units = output_size;
     Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
     auto logits = AddDenseLayer("2", scope_dense3, in_units, out_units, false, relu);
 
     out_classification =Multiply(t_root.WithOpName(out_name), logits, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
+	*/
+	in_units = out_units;
+    out_units = output_size;
+    Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
+	out_classification=AddOutLayer(scope_dense3, in_units, out_units, relu);
+
     return t_root.status();
 }
 
@@ -198,7 +216,7 @@ Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<st
     std::vector<Tensor> out_tensors;
 
 	
-    TF_CHECK_OK(t_session->Run({{input_batch_var, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
+    TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 	
     loss = tensorMean(out_tensors[0]);
 	
@@ -235,7 +253,7 @@ Status NeuralNet::Predict(Tensor image, std::vector<float>& result)
     
     std::vector<Tensor> out_tensors;
     //Inputs: image, drop rate 1 and skip drop.
-    TF_CHECK_OK(t_session->Run({{input_batch_var, image}}, {out_classification}, &out_tensors));
+    TF_CHECK_OK(t_session->Run({{input_placeholder, image}}, {out_classification}, &out_tensors));
     result=TensorToVec(out_tensors[0])[0];
     return Status::OK();
 }

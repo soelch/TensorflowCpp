@@ -10,10 +10,10 @@ using namespace tensorflow;
 
 int main(){
 	std::string folder=std::getenv("HOME")+std::string("/local/tensorflow_cc-master/test/");
-	const auto config=getCSVasVec(folder+"config.csv");
+	const auto config=getCSVasVec(folder+"config_main.csv");
 	std::cout<<config<<std::endl;
 	std::vector<tensorflow::Tensor> input, label;
-	SetupBatches(input, folder+"writer2.csv", 8, label, folder+"CleanTraining250.csv", 4, 3);
+	SetupBatches(input, folder+"writer2.csv", 8, label, folder+"writer1_clean.csv", 4, 3);
 
 
 	Scope root = Scope::NewRootScope();

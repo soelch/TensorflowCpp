@@ -8,6 +8,8 @@
 #include <tensorflow/cc/saved_model/loader.h>
 #include <tensorflow/cc/saved_model/tag_constants.h>
 
+#include <chrono>
+
 using namespace tensorflow;
 
 int main(){
@@ -39,8 +41,14 @@ int main(){
 	//std::vector<std::string> output_name{"StatefulPartitionedCall:0"};
 	std::vector<Tensor> out_tensors;
 	
-	for(int i=0; i<100; i++){
-		Status runStatus = model.GetSession()->Run({{input_name, input[compTime]}}, {output_name}, {}, &results);
+	
+	for(int i=0; i<10; i++){
+		auto begin = std::chrono::steady_clock::now();
+		Status runStatus = model.GetSession()->Run({{input_name, input[int(i/4)]}}, {output_name}, {}, &results);
+		auto end = std::chrono::steady_clock::now();
+		std::cout<<"time: "<<std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<<std::endl;
+		//std::cout<<TensorToVec(results[0])[0]<<std::endl;
+		/*
 		std::cout<<runStatus<<std::endl;
 		
 		
@@ -53,9 +61,11 @@ int main(){
 		std::cout<<avg/res.size()<<std::endl;
 		AB.insert(AB.end(), res.begin(), res.end());
 		csvWrite.push_back(AB);
+		*/
 	}
 	
-	VecToCSV(csvWrite);
+	
+	//VecToCSV(csvWrite);
 	
 	return 1;
 }

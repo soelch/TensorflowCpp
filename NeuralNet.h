@@ -40,7 +40,7 @@ private:
     Scope t_root;
     std::unique_ptr<ClientSession> t_session;
     std::unique_ptr<Session> f_session;
-    Output input_batch_var;
+    Output input_placeholder;
     string input_name = "input";
     Output input_labels_var;
     Output drop_rate_var; //use real drop rate in training and 1 in validating
@@ -69,6 +69,7 @@ public:
 	void CreateNN(int in, int middle, int out);
     Input Init(Scope scope, int in_chan, int out_chan);
     Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);
+    Output AddOutLayer(Scope scope, int in_units, int out_units, Input input);
     Status CreateNNGraph();
     Status CreateOptimizationGraph(float learning_rate);
 	Status UpdateOptimizationGraph(float learning_rate);
