@@ -220,7 +220,7 @@ Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<st
 
 	
 
-    TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {input_labels_var, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
+    TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 
 	
     loss = tensorMean(out_tensors[0]);
