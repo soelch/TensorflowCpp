@@ -21,7 +21,6 @@
 #include "tensorflow/cc/framework/scope.h"
 #include "TensorCalc.h"
 
-//using namespace std;
 using namespace tensorflow;
 using namespace tensorflow::ops;
 
@@ -36,21 +35,14 @@ private:
     Output file_name_var;
     Output image_tensor_var;
     Scope a_root;
-    Output aug_tensor_input;
-    Output aug_tensor_output;
     Scope net_scope;
     std::unique_ptr<ClientSession> t_session;
     std::unique_ptr<Session> f_session;
     Output input_placeholder;
     string input_name = "input";
     Output label_placeholder;
-    Output drop_rate_var; //use real drop rate in training and 1 in validating
-    string drop_rate_name = "drop_rate";
-    Output skip_drop_var; //use 0 in trainig and 1 in validating
-    string skip_drop_name = "skip_drop";
     Output out_classification;
     string out_name = "output_classes";
-    Output logits;
     //Network maps
     std::map<string, Output> m_vars;
     std::map<string, TensorShape> m_shapes;
@@ -60,10 +52,8 @@ private:
 	std::vector<Output> grad_outputs;
     std::vector<Operation> v_out_grads;
     Output out_loss_var;
-    InputList MakeTransforms(int batch_size, Input a0, Input a1, Input a2, Input b0, Input b1, Input b2);
-	//stores previous network in-/output
-	tensorflow::Tensor prevInput;
-	tensorflow::Tensor prevOutput;
+    //InputList MakeTransforms(int batch_size, Input a0, Input a1, Input a2, Input b0, Input b1, Input b2);
+
 public:
 	NeuralNet():input_size(0), middle_size(0), output_size(0), t_root(Scope::NewRootScope()), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()){}
     NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out), t_root(Scope::NewRootScope()), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()) {} 
@@ -76,19 +66,7 @@ public:
 	Status UpdateOptimizationGraph(float learning_rate);
     Status Initialize();
     Status Train(Tensor& image_batch, Tensor& label_batch, std::vector<std::vector<float>>& results, float& loss);
-	Status SetPrevInput(tensorflow::Tensor t);
-	Status SetPrevOutput(tensorflow::Tensor t);
     Status ValidateNN(Tensor& image_batch, Tensor& label_batch, std::vector<float>& results);
     Status Predict(Tensor image, std::vector<float>& result);
-    Status FreezeSave(string& file_name);
-    Status LoadSavedModel(string& file_name);
-    Status PredictFromFrozen(Tensor& image, int& result);
-    Status CreateAugmentGraph(int batch_size, int image_side, float flip_chances, float max_angles, float sscale_shift_factor);
-    Status RandomAugmentBatch(Tensor& image_batch, Tensor& augmented_batch);
-    Status WriteBatchToImageFiles(Tensor& image_batch, string folder_name, string image_name);
 };
 
-
-void write_scalar(tensorflow::EventsWriter* writer, double wall_time, tensorflow::int64 step, const std::string& tag, float simple_value);
-
-//#include "NN.cpph"

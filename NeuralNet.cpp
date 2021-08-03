@@ -64,41 +64,6 @@ Output NeuralNet::AddOutLayer(Scope scope, int in_units, int out_units, Input in
 }
 
 
-/*
-Status NeuralNet::FreezeSave(string& file_name)
-{
-    std::vector<Tensor> out_tensors;
-    //Extract: current weights and biases current values
-    TF_CHECK_OK(t_session->Run(v_weights_biases , &out_tensors));
-    unordered_map<string, Tensor> variable_to_value_map;
-    int idx = 0;
-    for(Output o: v_weights_biases)
-    {
-        variable_to_value_map[o.node()->name()] = out_tensors[idx];
-        idx++;
-    }
-    GraphDef graph_def;
-    TF_CHECK_OK(net_scope.ToGraphDef(&graph_def));
-    //call the utility function (modified)
-    SavedModelBundle saved_model_bundle;
-    SignatureDef signature_def;
-    (*signature_def.mutable_inputs())[input_placeholder.name()].set_name(input_placeholder.name());
-    (*signature_def.mutable_outputs())[out_classification.name()].set_name(out_classification.name());
-    MetaGraphDef* meta_graph_def = &saved_model_bundle.meta_graph_def;
-    (*meta_graph_def->mutable_signature_def())["signature_def"] = signature_def;
-    *meta_graph_def->mutable_graph_def() = graph_def;
-    SessionOptions session_options;
-    saved_model_bundle.session.reset(NewSession(session_options));//even though we will not use it
-    GraphDef frozen_graph_def;
-    std::unordered_set<string> inputs;
-    std::unordered_set<string> outputs;
-    TF_CHECK_OK(FreezeSavedModel(saved_model_bundle, &frozen_graph_def, &inputs, &outputs));
-
-    //write to file
-    return WriteBinaryProto(Env::Default(), file_name, frozen_graph_def);
-}
-*/
-
 Status NeuralNet::CreateNNGraph()
 {
 
@@ -109,19 +74,6 @@ Status NeuralNet::CreateNNGraph()
     Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
     auto relu = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_placeholder);
 
-/*
-	in_units = out_units;
-    out_units = middle_size;
-    Scope scope_dense2 = net_scope.NewSubScope("Dense2_layer");
-    auto relu2 = AddDenseLayer("2", scope_dense2, in_units, out_units, true, relu1);
-
-    in_units = out_units;
-    out_units = output_size;
-    Scope scope_dense3 = net_scope.NewSubScope("Dense3_layer");
-    auto logits = AddDenseLayer("2", scope_dense3, in_units, out_units, false, relu);
-
-    out_classification =Multiply(t_root.WithOpName(out_name), logits, 1.0f);//Sigmoid(t_root.WithOpName(out_name), logits);
-	*/
 	in_units = out_units;
     out_units = output_size;
     Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
@@ -144,7 +96,6 @@ Status NeuralNet::CreateOptimizationGraph(float learning_rate)
     int index = 0;
     for(pair<string, Output> i: m_vars)
     {
-        //Applying Adam
         string s_index = to_string(index);
         auto m_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
         auto v_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
@@ -160,18 +111,12 @@ Status NeuralNet::CreateOptimizationGraph(float learning_rate)
 
 Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
 {
-	/*
-    for(pair<string, Output> i: m_vars)
-        v_weights_biases.push_back(i.second);
-    
-    TF_CHECK_OK(AddSymbolicGradients(net_scope, {out_loss_var}, v_weights_biases, &grad_outputs));
-    */
+
 	v_out_grads.clear();
 	std::map<string, Output> m_assigns_new;
 	int index = 0;
     for(pair<string, Output> i: m_vars)
     {
-        //Applying Adam
         string s_index = to_string(index);
         auto m_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
         auto v_var = Variable(net_scope, m_shapes[i.first], DT_FLOAT);
@@ -201,13 +146,7 @@ Status NeuralNet::Initialize()
         ops_to_run.push_back(i.second);
     t_session = std::unique_ptr<ClientSession>(new ClientSession(net_scope));
     TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
-    /* uncomment if you want visualization of the model graph
-    GraphDef graph;
-    TF_RETURN_IF_ERROR(net_scope.ToGraphDef(&graph));
-    SummaryWriterInterface* w;
-    TF_CHECK_OK(CreateSummaryFileWriter(1, 0, "/Users/bennyfriedman/Code/TF2example/TF2example/graphs", ".cnn-graph", Env::Default(), &w));
-    TF_CHECK_OK(w->WriteGraph(0, make_unique<GraphDef>(graph)));
-    */
+
     return Status::OK();
 }
 
@@ -227,44 +166,17 @@ Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<st
     return Status::OK();
 }
 
-//sets Tensor prevInput
-//used to start a new training set
-Status NeuralNet::SetPrevInput(tensorflow::Tensor t){
-	prevInput=t;
-	
-	return Status::OK();
-}
-
-//sets Tensor prevOutput
-//used to start a new training set
-Status NeuralNet::SetPrevOutput(tensorflow::Tensor t){
-	prevOutput=t;
-	
-	return Status::OK();
-}
-
 Status NeuralNet::Predict(Tensor image, std::vector<float>& result)
 {
     if(!net_scope.ok())
         return net_scope.status();
     
     std::vector<Tensor> out_tensors;
-    //Inputs: image, drop rate 1 and skip drop.
     TF_CHECK_OK(t_session->Run({{input_placeholder, image}}, {out_classification}, &out_tensors));
     result=TensorToVec(out_tensors[0])[0];
     return Status::OK();
 }
 
-void write_scalar(tensorflow::EventsWriter* writer, double wall_time, tensorflow::int64 step,
-                  const std::string& tag, float simple_value) {
-  tensorflow::Event event;
-  event.set_wall_time(wall_time);
-  event.set_step(step);
-  tensorflow::Summary::Value* summ_val = event.mutable_summary()->add_value();
-  summ_val->set_tag(tag);
-  summ_val->set_simple_value(simple_value);
-  writer->WriteEvent(event);
-}
 
 
 
