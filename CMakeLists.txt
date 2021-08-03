@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 17)
 
 
-set(cpps Test.cpp NeuralNet.cpp ReadCSV.cpp TensorCalc.cpp)
+set(cpps LoadModel.cpp NeuralNet.cpp ReadCSV.cpp TensorCalc.cpp)
 
 add_executable(example ${cpps})
 #SET(GCC_COVERAGE_COMPILE_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
