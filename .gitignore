@@ -6,4 +6,4 @@ cmake_install.cmake
 *.sven-VirtualBox
 example
 *.png
-model/
+model*
