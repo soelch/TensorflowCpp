@@ -37,12 +37,12 @@ private:
     Scope a_root;
     Output aug_tensor_input;
     Output aug_tensor_output;
-    Scope t_root;
+    Scope net_scope;
     std::unique_ptr<ClientSession> t_session;
     std::unique_ptr<Session> f_session;
     Output input_placeholder;
     string input_name = "input";
-    Output input_labels_var;
+    Output label_placeholder;
     Output drop_rate_var; //use real drop rate in training and 1 in validating
     string drop_rate_name = "drop_rate";
     Output skip_drop_var; //use 0 in trainig and 1 in validating
@@ -64,8 +64,8 @@ private:
 	tensorflow::Tensor prevInput;
 	tensorflow::Tensor prevOutput;
 public:
-	NeuralNet():input_size(0), middle_size(0), output_size(0), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()){}
-    NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), t_root(Scope::NewRootScope()) {} 
+	NeuralNet():input_size(0), middle_size(0), output_size(0), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()){}
+    NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()) {} 
 	void CreateNN(int in, int middle, int out);
     Input Init(Scope scope, int in_chan, int out_chan);
     Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);

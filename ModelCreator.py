@@ -9,6 +9,8 @@ Created on Mon Feb 22 17:43:24 2021
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # or any {'0', '1', '2', '3'}
 
+import time
+
 #suppresses deprecation warnings (not relevant, as long as tf 2.3 is used)
 import tensorflow.python.util.deprecation as deprecation
 deprecation._PRINT_DEPRECATION_WARNINGS = False
@@ -21,7 +23,8 @@ import pandas as pd
 tf.keras.backend.set_floatx('float32')
 import seaborn as sns
 from matplotlib import pyplot as plt
-from tensorflow.keras import backend as K
+import math
+
 
 sns.reset_defaults()
 #sns.set_style('whitegrid')
@@ -29,6 +32,29 @@ sns.reset_defaults()
 sns.set_context(context='talk',font_scale=0.7)
 
 tfd = tfp.distributions
+
+class timecallback(tf.keras.callbacks.Callback):
+    def __init__(self):
+        self.times = []
+        # use this value as reference to calculate cummulative time taken
+        self.current = time.process_time()
+    def on_epoch_end(self,epoch,logs = {}):
+        self.times.append(time.process_time() - self.current)
+        self.current = time.process_time()
+    def on_train_end(self,logs = {}):
+        print("Average Time: "+str(np.sum(self.times)/len(self.times)))
+        print("Total Time: "+str(np.sum(self.times)))
+        print(len(self.times))
+        
+class LearningRateLoggingCallback(tf.keras.callbacks.Callback):
+
+    def on_epoch_end(self, epoch,logs={}):
+        print("lr: ")
+        print(self.model.optimizer._decayed_lr(tf.float32).numpy())
+        if(self.model.optimizer._decayed_lr(tf.float32).numpy()<2e-6):
+            self.model.optimizer.lr.decay_rate=1
+            self.model.optimizer.lr.initial_learning_rate=2e-6
+       
 
 def plot(hist):
     plt.plot(hist)
@@ -99,7 +125,7 @@ def prior(kernel_size, bias_size, dtype=None):
 
 def prior_trainable(kernel_size, bias_size=0, dtype=None):
   n = kernel_size + bias_size
-  c = np.log(np.expm1(.07))
+  c = np.log(np.expm1(1))
   return tf.keras.Sequential([
       tfp.layers.VariableLayer(2*n, dtype=dtype, 
                                #initializer=tfp.layers.BlockwiseInitializer(['zeros',
@@ -120,14 +146,14 @@ def posterior(kernel_size, bias_size, dtype=None):
 
 def posterior_mean_field(kernel_size, bias_size=0, dtype=None):
   n = kernel_size + bias_size
-  c = np.log(np.expm1(.000001))#e-7
+  c = np.log(np.expm1(1))#e-7
   return tf.keras.Sequential([
       tfp.layers.VariableLayer(2*n, dtype=dtype, 
                                #initializer=tfp.layers.BlockwiseInitializer(['zeros',
                                #tf.keras.initializers.Constant(np.log(np.expm1(1.)))], sizes=[n, n])
                                ),
       tfp.layers.DistributionLambda(lambda t: tfd.Independent(
-          tfd.Normal(loc=t[..., :n], scale=tf.nn.softplus(c + t[..., n:])),
+          tfd.Normal(loc=t[..., :n]+0.2, scale=0.00001*tf.nn.softplus(c + t[..., n:])),
           reinterpreted_batch_ndims=1)),
   ])
 
@@ -173,7 +199,7 @@ def get_real_trainig_data(datasets_in, datasets_label):
     
     for i in range(1, int(dflist_in[0].iloc[[-1]][0])+1):
         for j in range(n_scenarios):
-            tmp=j*n_scenarios
+            tmp=j*n_datasets
             for k in range(n_datasets):
                 input_array = np.append(input_array, np.array([dflist_in[j][dflist_in[j][0]==i].transpose().iloc[1].values.tolist()]), axis=0)
                 label_array = np.append(label_array, np.true_divide(np.array([dflist_label[tmp+k][dflist_label[tmp+k][0]==i].transpose().iloc[2].values.tolist()]), np.array([dflist_label[tmp+k][dflist_label[tmp+k][0]==i].transpose().iloc[1].values.tolist()])), axis=0)
@@ -242,21 +268,21 @@ def compile_prob_model_modified(size_in, size_out, n_datasets, kl_mod):
     model = tf.keras.models.Sequential([
       tf.keras.layers.InputLayer(input_shape=(size_in,), name="input"),
       tfp.layers.DenseVariational(size_out*2, posterior_mean_field, prior_trainable, kl_weight=kl_mod, #/batch_size <-- should this be batch size or total dataset/epoch size?
-                                   kl_use_exact=False, activation=act_final),#tf.keras.layers.LeakyReLU(alpha=0.01)
+                                   kl_use_exact=True, activation="relu"),#tf.keras.layers.LeakyReLU(alpha=0.01)
       #tf.keras.layers.Dense(2*size_out, activation=act_final, kernel_initializer=tf.keras.initializers.RandomUniform(minval=1/1500, maxval=2/1500),),
       tfp.layers.DistributionLambda(lambda t: tfd.Normal(loc=t[..., :size_out], scale=tf.nn.softplus(t[...,size_out:]))),
     ])
     
-    lr = 0.001
+    lr = 0.000005
     
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         lr,
-        decay_steps=500,
+        decay_steps=100,
         decay_rate=0.95,
         staircase=False)
     
     opt=tf.keras.optimizers.Adam(
-        learning_rate=lr_schedule,
+        learning_rate=lr,
         name='adam_opt'
     )
 
@@ -270,14 +296,23 @@ def compile_prob_model_modified(size_in, size_out, n_datasets, kl_mod):
     return model
 
 def compile_std_model(size_in, size_out):
+    
     model = tf.keras.models.Sequential([
       tf.keras.layers.InputLayer(input_shape=size_in),
-      tf.keras.layers.Dense(units=size_in, activation='relu'),  #<-- check, if size_out is sufficient
+      tf.keras.layers.Dense(units=size_out/4, activation="relu"),#act_final
+      tf.keras.layers.Dense(units=size_out/4, activation="relu"),#act_final
       tf.keras.layers.Dense(units=size_out)
     ])
+
     
     loss_fn = tf.keras.losses.MeanSquaredError(reduction="auto")
-    lr = 0.000005
+    lr = 0.0000005
+    
+    lrs= tf.keras.optimizers.schedules.ExponentialDecay(
+        lr,
+        decay_steps=1000,
+        decay_rate=0.96,
+        staircase=False)
     
     opt=tf.keras.optimizers.Adam(
         learning_rate=lr,
@@ -308,34 +343,184 @@ def prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl
 
     model = compile_prob_model_modified(np.shape(input_array)[1], np.shape(label_array)[1], n_datasets, kl_mod)
     
+    timetaken = timecallback()
+    lrcall=LearningRateLoggingCallback()
+    
     loss=[]
     mae=[]
 
     for i in range(len(ep)):
-        temp=model.fit(input_array, label_array, batch_size=batch_sizes[i], epochs=ep[i], shuffle=True)
+        temp=model.fit(input_array, label_array, batch_size=batch_sizes[i], epochs=ep[i], shuffle=True,callbacks = [lrcall,timetaken])
         run_comparison_prob(model,batch_sizes[i],kl_mod)
         
         loss.extend(temp.history["loss"])
         mae.extend(temp.history["mean_absolute_error"])
     #plot(loss)
     
-    tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
+    tf.keras.models.save_model(model, 'model_prob_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets)+"_final_1")
 
 def std_run(datasets_in, datasets_label, datatype, ep, batch_sizes):
     input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
+    
+    timetaken = timecallback()
+    lrcall=LearningRateLoggingCallback()
 
     model = compile_std_model(np.shape(input_array)[1], np.shape(label_array)[1])
     loss=[]
     mae=[]
     kl_mod=0
     for i in range(len(ep)):
-        temp=model.fit(input_array, label_array, batch_size=batch_sizes[i], epochs=ep[i], shuffle=True)
+        temp=model.fit(input_array, label_array, batch_size=batch_sizes[i], epochs=ep[i], shuffle=True,callbacks = [lrcall,timetaken])
         run_comparison_std(model,batch_sizes[i],kl_mod)
         loss.extend(temp.history["loss"])
         mae.extend(temp.history["mean_absolute_error"])
-    plot(loss)
+    #plot(loss)
     
-    tf.keras.models.save_model(model, 'model_std_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets))
+    tf.keras.models.save_model(model, 'model_std_'+datatype+'_s'+str(n_scenarios)+'_b'+str(n_datasets)+"_sp")
+    
+def compare(tstep, vel, mtype, mdtype, ndata, ndtype, additional):
+    a=np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(tstep)+"_in.csv"),axis=0)
+    comp=np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(tstep)+"_comp.csv")
+    
+    model = tf.keras.models.load_model("model_"+mtype+"_"+mdtype+"_s"+str(ndtype)+"_b"+str(ndata)+additional)
+
+    res=model.predict(a)
+    plt.plot(res[0])
+    plt.show()
+    plt.plot(np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res[0],6), axis=1),"go")
+    plt.plot(np.arange(0,50.1,0.1),comp)
+    plt.show()
+    print(np.std(np.array_split(res[0],6), axis=1))
+
+def writePred(tstep, vel, mtype, mdtype, ndata, ndtype, additional):
+    if(mtype=="prob"):
+        negloglik = lambda y, y_pred: -y_pred.log_prob(y)
+        model = tf.keras.models.load_model("model_"+mtype+"_"+mdtype+"_s"+str(ndtype)+"_b"+str(ndata)+additional, custom_objects={'<lambda>' : negloglik })
+    else:
+        model = tf.keras.models.load_model("model_"+mtype+"_"+mdtype+"_s"+str(ndtype)+"_b"+str(ndata)+additional)
+
+    for i in range(50,251,50):
+        path="../shared/MD30/predictions/"+mtype+"/final2/"+str(vel)+additional+"/"#"/"+str(ndtype)+"_"+str(ndata)+
+        if not os.path.exists(path):
+            os.mkdir(path)
+        path=path+str(i)
+        comp=np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_comp.csv", delimiter=",")
+        comp2=[]
+        comp2.append((comp[112][1]+comp[113][1])/2)
+        comp2.append((comp[137][1]+comp[138][1])/2)
+        comp2.append((comp[162][1]+comp[163][1])/2)
+        comp2.append((comp[187][1]+comp[188][1])/2)
+        comp2.append((comp[212][1]+comp[213][1])/2)
+        comp2.append((comp[237][1]+comp[238][1])/2)
+        comp=np.array(comp2)
+        res=model.predict(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0))[0]
+        np.savetxt(path+"_raw.csv", np.transpose(np.vstack((np.arange(1,217,1),res))),header="x,y",comments='',delimiter=",", fmt='%f')
+        res=model.predict(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0))[0]
+        np.savetxt(path+"_raw2.csv", np.transpose(np.vstack((np.arange(1,217,1),res))),header="x,y",comments='',delimiter=",", fmt='%f')
+        
+        if(mtype=="prob"):
+            mean=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).mean()[0]
+            np.savetxt(path+"_rawmean.csv", np.transpose(np.vstack((np.arange(1,217,1),mean))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_mean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(mean,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            stddev=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).stddev()[0]
+            np.savetxt(path+"_absErrMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            print(str(i)+": "+str(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp))))
+            np.savetxt(path+"meanstddev.csv", np.expand_dims(np.mean(stddev),axis=0),delimiter=",", fmt='%f')
+            for j in range(99):
+                mean+=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).mean()[0]
+            mean=mean*0.01
+            np.savetxt(path+"_meanmean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(mean,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErrMeanMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            
+        else:
+            np.savetxt(path+"_mean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErr.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res,6), axis=1)-comp))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErrMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(res,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            print(str(i)+": "+str(np.mean(np.absolute(np.mean(np.array_split(res,6), axis=1)-comp))))
+            np.savetxt(path+"_stddev.csv", np.std(np.array_split(res,6), axis=1),delimiter=",", fmt='%f')
+            np.savetxt(path+"meanstddev.csv", np.expand_dims(np.mean(np.std(np.array_split(res,6), axis=1)),axis=0),delimiter=",", fmt='%f')
+            
+
+    
+    for i in range(300,1001,50):
+        path="../shared/MD30/predictions/"+mtype+"/final2/"+str(vel)+additional+"/"#"/"+str(ndtype)+"_"+str(ndata)+
+        if not os.path.exists(path):
+            os.mkdir(path)
+        path=path+str(i)
+        comp=np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_comp.csv", delimiter=",")
+        comp2=[]
+        comp2.append((comp[112][1]+comp[113][1])/2)
+        comp2.append((comp[137][1]+comp[138][1])/2)
+        comp2.append((comp[162][1]+comp[163][1])/2)
+        comp2.append((comp[187][1]+comp[188][1])/2)
+        comp2.append((comp[212][1]+comp[213][1])/2)
+        comp2.append((comp[237][1]+comp[238][1])/2)
+        comp=np.array(comp2)
+        res=model.predict(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0))[0]
+        np.savetxt(path+"_raw.csv", np.transpose(np.vstack((np.arange(1,217,1),res))),header="x,y",comments='',delimiter=",", fmt='%f')
+        if(mtype=="prob"):
+            mean=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).mean()[0]
+            np.savetxt(path+"_rawmean.csv", np.transpose(np.vstack((np.arange(1,217,1),mean))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_mean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(mean,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            stddev=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).stddev()[0]
+            np.savetxt(path+"_absErrMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            print(str(i)+": "+str(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp))))
+            
+            print(np.mean(stddev))
+            np.savetxt(path+"meanstddev.csv", np.expand_dims(np.mean(stddev),axis=0),delimiter=",", fmt='%f')
+            for j in range(99):
+                mean+=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).mean()[0]
+            mean=mean*0.01
+            np.savetxt(path+"_meanmean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(mean,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErrMeanMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            
+        else:
+            np.savetxt(path+"_mean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErr.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res,6), axis=1)-comp))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErrMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(res,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            print(str(i)+": "+str(np.mean(np.absolute(np.mean(np.array_split(res,6), axis=1)-comp))))
+            np.savetxt(path+"_stddev.csv", np.std(np.array_split(res,6), axis=1),delimiter=",", fmt='%f')
+            np.savetxt(path+"meanstddev.csv", np.expand_dims(np.mean(np.std(np.array_split(res,6), axis=1)),axis=0),delimiter=",", fmt='%f')
+    
+    for i in range(1500,5001,500):
+        path="../shared/MD30/predictions/"+mtype+"/final2/"+str(vel)+additional+"/"#"/"+str(ndtype)+"_"+str(ndata)+
+        if not os.path.exists(path):
+            os.mkdir(path)
+        path=path+str(i)
+        comp=np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_comp.csv", delimiter=",")
+        comp2=[]
+        comp2.append((comp[112][1]+comp[113][1])/2)
+        comp2.append((comp[137][1]+comp[138][1])/2)
+        comp2.append((comp[162][1]+comp[163][1])/2)
+        comp2.append((comp[187][1]+comp[188][1])/2)
+        comp2.append((comp[212][1]+comp[213][1])/2)
+        comp2.append((comp[237][1]+comp[238][1])/2)
+        comp=np.array(comp2)
+        res=model.predict(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0))[0]
+        np.savetxt(path+"_raw.csv", np.transpose(np.vstack((np.arange(1,217,1),res))),header="x,y",comments='',delimiter=",", fmt='%f')
+        if(mtype=="prob"):
+            mean=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).mean()[0]
+            np.savetxt(path+"_rawmean.csv", np.transpose(np.vstack((np.arange(1,217,1),mean))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_mean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(mean,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            stddev=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).stddev()[0]
+            np.savetxt(path+"_absErrMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            print(str(i)+": "+str(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp))))
+            
+            print(np.mean(stddev))
+            np.savetxt(path+"meanstddev.csv", np.expand_dims(np.mean(stddev),axis=0),delimiter=",", fmt='%f')
+            for j in range(99):
+                mean+=model(np.expand_dims(np.genfromtxt("../shared/MD30/analytical/"+str(vel)+"/"+str(i)+"_in.csv"),axis=0)).mean()[0]
+            mean=mean*0.01
+            np.savetxt(path+"_meanmean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(mean,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErrMeanMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(mean,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            
+        else:
+            np.savetxt(path+"_mean.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res,6), axis=1)))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErr.csv", np.transpose(np.vstack((np.arange(11.25,23.75+1,2.5),np.mean(np.array_split(res,6), axis=1)-comp))),header="x,y",comments='',delimiter=",", fmt='%f')
+            np.savetxt(path+"_absErrMean.csv", np.expand_dims(np.mean(np.absolute(np.mean(np.array_split(res,6), axis=1)-comp)),axis=0),header="x,y",comments='',delimiter=",", fmt='%f')
+            print(str(i)+": "+str(np.mean(np.absolute(np.mean(np.array_split(res,6), axis=1)-comp))))
+            np.savetxt(path+"_stddev.csv", np.std(np.array_split(res,6), axis=1),delimiter=",", fmt='%f')
+            np.savetxt(path+"meanstddev.csv", np.expand_dims(np.mean(np.std(np.array_split(res,6), axis=1)),axis=0),delimiter=",", fmt='%f')
 
 ##########################################
 
@@ -353,7 +538,7 @@ else:
 
 if(datatype=="30"):
     datasets_in = [["../shared/MD30/250steps/1.5vel/writer2.csv"], 
-                    #["../shared/MD30/250steps/1.0vel/writer2.csv"]
+                    ["../shared/MD30/250steps/1.0vel/writer2.csv"]
                    ]
 
     datasets_label = [["../shared/MD30/250steps/1.5vel/1/writer_"+gauss+".csv", 
@@ -361,15 +546,16 @@ if(datatype=="30"):
                         "../shared/MD30/250steps/1.5vel/3/writer_"+gauss+".csv",
                         "../shared/MD30/250steps/1.5vel/4/writer_"+gauss+".csv", 
                         "../shared/MD30/250steps/1.5vel/5/writer_"+gauss+".csv", 
-                        "../shared/MD30/250steps/1.5vel/6/writer_"+gauss+".csv"],
+                        "../shared/MD30/250steps/1.5vel/6/writer_"+gauss+".csv"
+                        ],
                       
-                        # ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
-                        #  "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
-                        #  "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
-                      ]
+                           ["../shared/MD30/250steps/1.0vel/1/writer_"+gauss+".csv", 
+                             "../shared/MD30/250steps/1.0vel/2/writer_"+gauss+".csv", 
+                             "../shared/MD30/250steps/1.0vel/3/writer_"+gauss+".csv",
+                             "../shared/MD30/250steps/1.0vel/4/writer_"+gauss+".csv", 
+                             "../shared/MD30/250steps/1.0vel/5/writer_"+gauss+".csv", 
+                             "../shared/MD30/250steps/1.0vel/6/writer_"+gauss+".csv"]
+                       ]
 if(datatype=="60"):
     datasets_in = [["../shared/MD60/500steps/1.5vel/writer2.csv"], 
                    ["../shared/MD60/500steps/1.0vel/writer2.csv"]
@@ -393,13 +579,35 @@ if(datatype=="60"):
 
 
 
-ep=[1000,1000,1000,1000,5000,5000]
-batch_sizes=[100,100,100,100,100,100]
-kl_mod=1/(1500/1)*10
+ep=[2500]
+batch_sizes=[100]
+kl_mod=1/(3000/1)# /10
+l=1
+a=1
+n=1512*a
+
+
+tstep=200
+vel=1.5
+mtype="prob"
+mdtype="30"
+ndtype=2
+ndata=6
+
+
+#std_run(datasets_in, datasets_label, datatype, ep, batch_sizes)
 
 
 
-prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl_mod)
+
+#prob_run_modified(datasets_in, datasets_label, datatype, ep, batch_sizes, kl_mod)
+
+additional="_final_good"
+writePred(tstep, vel, mtype, mdtype, ndata, ndtype, additional)
+
+
+#compare(tstep, vel, mtype, mdtype, ndata, ndtype, additional)
+
 
 # =============================================================================
 # input_array, label_array, n_scenarios, n_datasets = get_real_trainig_data(datasets_in, datasets_label)
