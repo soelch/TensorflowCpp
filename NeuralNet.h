@@ -30,7 +30,6 @@ class NeuralNet
 {
 private:
 	int input_size, middle_size, output_size;
-	Scope t_root;
     Scope i_root;
     Output file_name_var;
     Output image_tensor_var;
@@ -55,8 +54,8 @@ private:
     //InputList MakeTransforms(int batch_size, Input a0, Input a1, Input a2, Input b0, Input b1, Input b2);
 
 public:
-	NeuralNet():input_size(0), middle_size(0), output_size(0), t_root(Scope::NewRootScope()), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()){}
-    NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out), t_root(Scope::NewRootScope()), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()) {} 
+	NeuralNet():input_size(0), middle_size(0), output_size(0), i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()){}
+    NeuralNet(int in, int middle, int out): input_size(in), middle_size(middle), output_size(out),  i_root(Scope::NewRootScope()), a_root(Scope::NewRootScope()), net_scope(Scope::NewRootScope()) {} 
 	void CreateNN(int in, int middle, int out);
     Input Init(Scope scope, int in_chan, int out_chan);
     Input AddDenseLayer(string idx, Scope scope, int in_units, int out_units, bool bActivation, Input input);

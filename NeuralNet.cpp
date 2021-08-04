@@ -67,19 +67,19 @@ Output NeuralNet::AddOutLayer(Scope scope, int in_units, int out_units, Input in
 Status NeuralNet::CreateNNGraph()
 {
 
-    input_placeholder = Placeholder(t_root.WithOpName(input_name), DT_FLOAT);
-
+    input_placeholder = Placeholder(net_scope.WithOpName(input_name), DT_FLOAT);
+	
     int in_units = input_size;
     int out_units = middle_size;
-    Scope scope_dense1 = t_root.NewSubScope("Dense1_layer");
+    Scope scope_dense1 = net_scope.NewSubScope("Dense1_layer");
     auto relu = AddDenseLayer("1", scope_dense1, in_units, out_units, true, input_placeholder);
 
 	in_units = out_units;
     out_units = output_size;
-    Scope scope_dense3 = t_root.NewSubScope("Dense3_layer");
-	out_classification=AddOutLayer(scope_dense3, in_units, out_units, relu);
+    Scope scope_dense2 = net_scope.NewSubScope("Dense2_layer");
+	out_classification=AddOutLayer(scope_dense2, in_units, out_units, relu);
 
-    return t_root.status();
+    return net_scope.status();
 
 }
 
@@ -91,7 +91,7 @@ Status NeuralNet::CreateOptimizationGraph(float learning_rate)
     TF_CHECK_OK(scope_loss.status());
     for(pair<string, Output> i: m_vars)
         v_weights_biases.push_back(i.second);
-    
+    std::vector<Output> grad_outputs;
     TF_CHECK_OK(AddSymbolicGradients(net_scope, {out_loss_var}, v_weights_biases, &grad_outputs));
     int index = 0;
     for(pair<string, Output> i: m_vars)
@@ -157,13 +157,13 @@ Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<st
     
     std::vector<Tensor> out_tensors;
 
-    TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
-
+    //TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
+	auto stat=t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors);
 	
     loss = tensorMean(out_tensors[0]);
 	results=TensorToVec(out_tensors[1]);
 
-    return Status::OK();
+    return stat;//Status::OK();
 }
 
 Status NeuralNet::Predict(Tensor image, std::vector<float>& result)

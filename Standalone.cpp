@@ -40,7 +40,7 @@ int main(){
 	float total=0.0, previous, trainRate=(float)config[0][0];
 	int ctr=0, limit=2;
 	const int nBatches=input.size();
-	
+
 	//trains the network for a given number of epochs and prints the loss each time
 	for(int i=0; i<config[0][1]; i++){ 
 		for(int j=0; j<nBatches; j++){
@@ -48,7 +48,7 @@ int main(){
 			total+=loss;
 		}
 		total=total/(float)nBatches;
-		std::cout<<"Loss: "<<total<<std:endl;
+		std::cout<<"Loss: "<<total<<std::endl;
 		/*
 		//this block checks if the network loss changed by less than a given threshold between 
 		//the last and the current iteration and increases a counter or resets it accordingly
@@ -64,10 +64,13 @@ int main(){
 	
 	//computes a prediction for a given timestep
 	//for batch sizes other than 1, the index for "input" is not equal to the time step
-	NN.Predict(getTensorByIndex(input[65],1), res);
+	NN.Predict(getTensorByIndex(input[65],0), res);
 	std::cout<<res<<std::endl;
 	std::vector<float> AB = res;
-	res-=TensorToVec(getTensorByIndex(label[65],1))[0];
+	std::cout<<res.size();
+	std::cout<<getTensorByIndex(label[65],0).DebugString()<<std::endl;
+	std::cout<<TensorToVec(getTensorByIndex(label[65],0))[0].size();
+	res-=TensorToVec(getTensorByIndex(label[65],0))[0];
 	AB.insert(AB.end(), res.begin(), res.end());
 	
 	//writes prediction and absolute error to output.csv
