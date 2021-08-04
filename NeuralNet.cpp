@@ -11,7 +11,7 @@ auto tf_tensor_to_vector(tensorflow::Tensor tensor, int32_t tensorSize) {
   return v;
 }
 
-void NeuralNet::CreateNN(int in, int middle, int out){
+void NeuralNet::setDims(int in, int middle, int out){
 	input_size=in;
 	middle_size=middle;
 	output_size=out;
@@ -67,7 +67,7 @@ Output NeuralNet::AddOutLayer(Scope scope, int in_units, int out_units, Input in
 Status NeuralNet::CreateNNGraph()
 {
 
-    input_placeholder = Placeholder(net_scope.WithOpName(input_name), DT_FLOAT);
+    input_placeholder = Placeholder(net_scope.WithOpName("input"), DT_FLOAT);
 	
     int in_units = input_size;
     int out_units = middle_size;
@@ -131,7 +131,7 @@ Status NeuralNet::UpdateOptimizationGraph(float learning_rate)
 	std::vector<Output> ops_to_run;
     for(pair<string, Output> i: m_assigns_new) ops_to_run.push_back(i.second);
 
-    TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
+    TF_CHECK_OK(net_session->Run(ops_to_run, nullptr));
 	
     return net_scope.status();
 }
@@ -144,8 +144,8 @@ Status NeuralNet::Initialize()
     std::vector<Output> ops_to_run;
     for(pair<string, Output> i: m_assigns)
         ops_to_run.push_back(i.second);
-    t_session = std::unique_ptr<ClientSession>(new ClientSession(net_scope));
-    TF_CHECK_OK(t_session->Run(ops_to_run, nullptr));
+    net_session = std::unique_ptr<ClientSession>(new ClientSession(net_scope));
+    TF_CHECK_OK(net_session->Run(ops_to_run, nullptr));
 
     return Status::OK();
 }
@@ -157,13 +157,12 @@ Status NeuralNet::Train(Tensor& image_batch, Tensor& label_batch, std::vector<st
     
     std::vector<Tensor> out_tensors;
 
-    //TF_CHECK_OK(t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
-	auto stat=t_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors);
+    TF_CHECK_OK(net_session->Run({{input_placeholder, image_batch}, {label_placeholder, label_batch}}, {out_loss_var, out_classification}, v_out_grads, &out_tensors));
 	
     loss = tensorMean(out_tensors[0]);
 	results=TensorToVec(out_tensors[1]);
 
-    return stat;//Status::OK();
+    return Status::OK();
 }
 
 Status NeuralNet::Predict(Tensor image, std::vector<float>& result)
@@ -172,7 +171,7 @@ Status NeuralNet::Predict(Tensor image, std::vector<float>& result)
         return net_scope.status();
     
     std::vector<Tensor> out_tensors;
-    TF_CHECK_OK(t_session->Run({{input_placeholder, image}}, {out_classification}, &out_tensors));
+    TF_CHECK_OK(net_session->Run({{input_placeholder, image}}, {out_classification}, &out_tensors));
     result=TensorToVec(out_tensors[0])[0];
     return Status::OK();
 }

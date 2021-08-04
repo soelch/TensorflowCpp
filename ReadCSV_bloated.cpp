@@ -46,7 +46,7 @@ CSVRow const* CSVIterator::operator->()  const       {return &m_row;}
 bool CSVIterator::operator==(CSVIterator const& rhs) {return ((this == &rhs) || ((this->m_str == NULL) && (rhs.m_str == NULL)));}
 
 bool CSVIterator::operator!=(CSVIterator const& rhs) {return !((*this) == rhs);}
-//
+
 std::vector<std::string> getConfigFromCSV(std::string filename){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
@@ -60,7 +60,7 @@ std::vector<std::string> getConfigFromCSV(std::string filename){
 	}
 	return vec;
 }
-//
+
 std::vector<std::vector<float>> getCSVasVec(std::string filename){
 	std::ifstream file(filename);
 	CSVIterator loop(file);
@@ -79,7 +79,7 @@ std::vector<std::vector<float>> getCSVasVec(std::string filename){
 	}
 	return vec;
 }
-//
+
 std::vector<std::vector<float>> getCSVasVec(std::vector<std::string> filenameVec){
 	std::vector<std::vector<float>> vec, temp;
 
@@ -90,21 +90,21 @@ std::vector<std::vector<float>> getCSVasVec(std::vector<std::string> filenameVec
 	
 	return vec;
 }
-//
+
 std::vector<std::vector<float>> getCSVasVec(std::string filename, int index){
 	std::vector<std::vector<float>> temp=getCSVasVec(filename);
 	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
 	for(auto element : temp) vec[element[0]-1].push_back(element[index]);
 	return vec;
 }
-//
+
 std::vector<std::vector<float>> getCSVasVec(std::string filename, int index, int divisor){
 	std::vector<std::vector<float>> temp=getCSVasVec(filename);
 	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
 	for(auto element : temp) vec[element[0]-1].push_back(element[index]/element[divisor]);
 	return vec;
 }
-//
+
 std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, int index){
 	std::vector<std::vector<float>> temp=getCSVasVec(filename);
 	std::vector<std::vector<float>> vec(maxInColumn(temp, 0),std::vector<float>());
@@ -120,6 +120,69 @@ std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, 
 	for(auto element : temp){
 		if(element[1]!=0 && element[1]!=13 && element[2]!=0 && element[2]!=13 && element[3]!=0 && element[3]!=13)vec[element[0]-1].push_back(element[index]/element[divisor]);
 	}
+	return vec;
+}
+
+
+std::vector<float> getCSVEntryasVec(std::string filename, int index){
+	std::ifstream file(filename);
+	CSVIterator loop(file);
+	std::vector<float> vec;
+	
+    for(; loop != CSVIterator(); ++loop){
+		vec.push_back((float)(std::stod(std::string((*loop)[index]))));
+	}
+	
+	return vec;
+}
+
+std::vector<std::vector<float>> getCSVEntryasVec(std::vector<std::string> filenameVec, int index){
+	std::vector<std::vector<float>> vec;
+	for(auto filename : filenameVec){
+		vec.push_back(getCSVEntryasVec(filename, index));
+	}
+	return vec;
+}
+
+const tensorflow::Tensor getCSVasTensor(std::string filename){
+	return VecToTensor(getCSVasVec(filename));
+}
+
+const tensorflow::Tensor getCSVasTensor(std::vector<std::string> filenameVec){
+	return VecToTensor(getCSVasVec(filenameVec));
+}
+
+const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filenameVec, int index){
+	return VecToTensor(getCSVEntryasVec(filenameVec, index));
+}
+
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index){
+	return VecToTensor(getCSVasVec(filename, index));
+}
+
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index, int divisor){
+	return VecToTensor(getCSVasVec(filename, index, divisor));
+}
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVec(filename, index);
+	
+	for(std::vector<float> entry : temp){
+		vec.push_back(VecToTensor(entry));
+	}
+	
+	return vec;
+}
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index, int divisor){
+	std::vector<tensorflow::Tensor> vec;
+	std::vector<std::vector<float>> temp=getCSVasVec(filename, index, divisor);
+	
+	for(std::vector<float> entry : temp){
+		vec.push_back(VecToTensor(entry));
+	}
+	
 	return vec;
 }
 
@@ -140,7 +203,7 @@ const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename,
 	
 	return vec;
 }
-//
+
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size, int divisor){
 	std::vector<tensorflow::Tensor> vec;
 	std::vector<std::vector<float>> temp=getCSVasVec(filename, index, divisor);
@@ -159,7 +222,7 @@ const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename,
 	return vec;
 }
 
-//
+
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size){
 	std::vector<tensorflow::Tensor> vec;
 	std::vector<std::vector<float>> temp=getCSVasVecExcludingGhost(filename, index);
@@ -177,7 +240,7 @@ const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::st
 	
 	return vec;
 }
-//
+
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size, int divisor){
 	std::vector<tensorflow::Tensor> vec;
 	std::vector<std::vector<float>> temp=getCSVasVecExcludingGhost(filename, index, divisor);
@@ -219,6 +282,10 @@ void VecToCSV(std::vector<float> vec){
     }
 }
 
+void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, tensorflow::Tensor& label, std::string label_path, int label_column){
+	in=getCSVasTensor(in_path, in_column);
+	label=getCSVasTensor(label_path, label_column);
+}
 
 void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size){
 	in=getCSVasVecOfBatches(in_path, in_column, batch_size);
@@ -229,12 +296,12 @@ void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int 
 	in=getCSVasVecOfBatches(in_path, in_column, batch_size);
 	label=getCSVasVecOfBatches(label_path, label_column, batch_size, divisor);
 }
-//
+
 void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size){
 	in=getCSVasVecOfBatchesExcludingGhost(in_path, in_column, batch_size);
 	label=getCSVasVecOfBatches(label_path, label_column, batch_size);
 }
-//
+
 void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor){
 	in=getCSVasVecOfBatchesExcludingGhost(in_path, in_column, batch_size);
 	label=getCSVasVecOfBatches(label_path, label_column, batch_size, divisor);

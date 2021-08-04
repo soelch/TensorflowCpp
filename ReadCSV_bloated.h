@@ -92,38 +92,50 @@ std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, 
 //same as getCSVasVec(std::string filename, int index, int divisor) but excludes ghost cells, i.e. index 0 and 13
 std::vector<std::vector<float>> getCSVasVecExcludingGhost(std::string filename, int index, int divisor);
 
-//gets csv as vec of tensors, with a variable number of timesteps per vector (batch_size)
+//gets single column of csv as 1D vec of floats
+std::vector<float> getCSVEntryasVec(std::string filename, int index);
+
+//gets single column of multiple csv as 1D vec of floats
+std::vector<std::vector<float>> getCSVEntryasVec(std::vector<std::string> filenameVec, int index);
+
+//gets csv as 2D Tensor
+const tensorflow::Tensor getCSVasTensor(std::string filename);
+
+//gets multiple csv as 2D Tensor
+const tensorflow::Tensor getCSVasTensor(std::vector<std::string> filenameVec);
+
+//gets one column from multiple csv as Tensor
+const tensorflow::Tensor getCSVEntriesasTensor(std::vector<std::string> filenameVec, int index);
+
+//gets one column from csv as Tensor
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index);
+
+//gets one column from multiple csv as Tensor and divides it by the divisor column
+const tensorflow::Tensor getCSVasTensor(std::string filename, int index, int divisor);
+
+//gets one column from multiple csv as vector of Tensors, makes it easier to access individual tensors
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index);
+
+const std::vector<tensorflow::Tensor> getCSVasVecOfTensors(std::string filename, int index, int divisor);
+
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size);
 
-//gets csv as vec of tensors, with a variable number of timesteps per vector (batch_size) and divides data by divisor column
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatches(std::string filename, int index, int batch_size, int divisor);
 
-//gets csv as vec of tensors, with a variable number of timesteps per vector (batch_size), excludes indices 0 and 13
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size);
 
-//gets csv as vec of tensors, with a variable number of timesteps per vector (batch_size) and divides data by divisor column, excludes indices 0 and 13
 const std::vector<tensorflow::Tensor> getCSVasVecOfBatchesExcludingGhost(std::string filename, int index, int batch_size, int divisor);
 
-//writes 2D vector to csv
 void VecToCSV(std::vector<std::vector<float>> vec2d);
 
-//writes 1D vector to csv
 void VecToCSV(std::vector<float> vec);
 
-//gets vector of tensors for both input and label data
-//the first two integers denote the column that are selected from the csv, the last sets the batch size
+void SetupTensors(tensorflow::Tensor& in, std::string in_path, int in_column, tensorflow::Tensor& label, std::string label_path, int label_column);
+
 void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size);
 
-//gets vector of tensors for both input and label data
-//the first two integers denote the column that are selected from the csv, the second to last sets the batch size
-//the last denotes the column by which the label data is divided, this is required to divide the MD moment by the mass
 void SetupBatches(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor);
 
-//gets vector of tensors for both input and label data, excluding indices 0 and 13
-//the first two integers denote the column that are selected from the csv, the last sets the batch size
 void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size);
 
-//gets vector of tensors for both input and label data, excluding indices 0 and 13
-//the first two integers denote the column that are selected from the csv, the second to last sets the batch size
-//the last denotes the column by which the label data is divided, this is required to divide the MD moment by the mass
 void SetupBatchesExcludingGhost(std::vector<tensorflow::Tensor>& in, std::string in_path, int in_column, std::vector<tensorflow::Tensor>& label, std::string label_path, int label_column, int batch_size, int divisor);

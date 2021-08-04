@@ -65,15 +65,11 @@ int main(){
 	//computes a prediction for a given timestep
 	//for batch sizes other than 1, the index for "input" is not equal to the time step
 	NN.Predict(getTensorByIndex(input[65],0), res);
-	std::cout<<res<<std::endl;
-	std::vector<float> AB = res;
-	std::cout<<res.size();
-	std::cout<<getTensorByIndex(label[65],0).DebugString()<<std::endl;
-	std::cout<<TensorToVec(getTensorByIndex(label[65],0))[0].size();
-	res-=TensorToVec(getTensorByIndex(label[65],0))[0];
-	AB.insert(AB.end(), res.begin(), res.end());
 	
 	//writes prediction and absolute error to output.csv
+	std::vector<float> AB = res;
+	res-=TensorToVec(getTensorByIndex(label[65],0))[0];
+	AB.insert(AB.end(), res.begin(), res.end());
 	VecToCSV(AB);
 	
 	return 1;

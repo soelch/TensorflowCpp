@@ -61,9 +61,8 @@ int main(){
 		Status runStatus = model.GetSession()->Run({{input_name, input[compTime]}}, {output_name}, {}, &results);
 		std::cout<<runStatus<<std::endl;
 		
-		//prints prediction and the difference to the label data
+		//saves prediction and the difference to the label data
 		res=TensorToVec(results[0])[0];
-		std::cout<<res<<std::endl;
 		std::vector<float> AB = res;
 		res-=TensorToVec(label[compTime])[0];
 		AB.insert(AB.end(), res.begin(), res.end());
