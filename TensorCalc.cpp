@@ -1,5 +1,3 @@
-
-
 #include "TensorCalc.h"
 
 float tensorMean(tensorflow::Tensor t){
